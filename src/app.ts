@@ -14,3 +14,5 @@ app.use('/api', routes);
 app.listen(process.env.PORT, () => {
     console.log('Server started at ' + process.env.PORT)
 });
+
+function 

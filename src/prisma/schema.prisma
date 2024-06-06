@@ -65,16 +65,20 @@ model VerificationToken {
 }
 
 model FinancialAccount {
-  id     String @id @default(cuid())
-  userId String @map("name")
-  typeId       String   @map("type_id")
+  id     String      @id @default(cuid())
+  userId String      @map("name")
+  typeId Int         @map("type_id")
+  type   AccountType @relation(fields: [typeId], references: [id], onDelete: Cascade)
 
   @@map("financial_accounts")
 }
 
 model AccountType {
-  id    Int      @id @default(autoincrement())
-  name   String
+  id                Int                @id @default(autoincrement())
+  name              String
+  initialBalance    BigInt
+  currentBalance    BigInt
+  financialAccounts FinancialAccount[]
 
   @@map("account_types")
 }
