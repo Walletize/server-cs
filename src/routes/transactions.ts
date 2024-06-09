@@ -5,10 +5,10 @@ const router = express.Router();
 
 router.post('/', async (req, res) => {
     try {
-        const account = req.body;
+        const transaction = req.body;
 
         await prisma.financialAccount.create({
-            data: account
+            data: transaction
         });
 
         return res.status(200).json();
@@ -20,13 +20,13 @@ router.post('/', async (req, res) => {
 
 router.get('/types', async (req, res) => {
     try {
-        const accountTypes = await prisma.accountType.findMany({
+        const transactionTypes = await prisma.transactionType.findMany({
             include: {
-                accountCategories: true,
+                transactionCategories: true,
             }
         })
-        
-        return res.status(200).json(accountTypes);
+
+        return res.status(200).json(transactionTypes);
     } catch (e) {
         console.error(e);
     }
@@ -37,9 +37,14 @@ router.get('/:userId', async (req, res) => {
     const userId = req.params.userId;
 
     try {
-        const accounts = await prisma.financialAccount.findMany({
+        const accounts = await prisma.transaction.findMany({
             where: {
-                userId: userId,
+                financialAccount: {
+                    userId: userId
+                }
+            },
+            include: {
+                financialAccount: true, // Include related FinancialAccount data
             }
         })
 
@@ -52,7 +57,7 @@ router.get('/:userId', async (req, res) => {
     } catch (e) {
         console.error(e);
 
-        return res.status(500).json({message: "Internal error"});
+        return res.status(500).json({ message: "Internal error" });
     }
 }
 );
