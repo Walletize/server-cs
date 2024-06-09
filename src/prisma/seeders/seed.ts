@@ -1,12 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { seedAccountTypes } from "./accountType";
-import { seedAccountSubtypes } from "./accountSubtype";
+import { seedAccountCategories } from "./accountCategories";
 
 const prisma = new PrismaClient()
 
 async function main() {
     await seedAccountTypes(prisma)
-    await seedAccountSubtypes(prisma)
+    await seedAccountCategories(prisma)
 }
 
 main()

@@ -14,18 +14,20 @@ generator client {
 }
 
 model Account {
-  id                String  @id @default(cuid())
-  userId            String  @map("user_id")
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
   type              String
   provider          String
-  providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  providerAccountId String   @map("provider_account_id")
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?  @db.Text
   session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -39,6 +41,8 @@ model Session {
   userId       String   @map("user_id")
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("sessions")
 }
@@ -52,6 +56,8 @@ model User {
   accounts          Account[]
   sessions          Session[]
   financialAccounts FinancialAccount[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@map("users")
 }
@@ -60,38 +66,84 @@ model VerificationToken {
   identifier String
   token      String
   expires    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([identifier, token])
   @@map("verification_tokens")
 }
 
 model FinancialAccount {
-  id             String         @id @default(cuid())
-  name           String
-  userId         String         @map("user_id")
-  subtypeId      String         @map("subtype_id")
-  initialValue   BigInt
-  currentValue   BigInt
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountSubtype AccountSubtype @relation(fields: [subtypeId], references: [id], onDelete: Cascade)
+  id              String          @id @default(cuid())
+  name            String
+  userId          String          @map("user_id")
+  categoryId      String          @map("category_id")
+  initialValue    BigInt
+  currentValue    BigInt
+  transactions    Transaction[]
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountCategory AccountCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@map("financial_accounts")
 }
 
 model AccountType {
-  id              String           @id @default(cuid())
-  name            String
-  accountSubtypes AccountSubtype[]
+  id                String            @id @default(cuid())
+  name              String
+  accountCategories AccountCategory[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@map("account_types")
 }
 
-model AccountSubtype {
+model AccountCategory {
   id                String             @id @default(cuid())
   name              String
   typeId            String             @map("type_id")
   financialAccounts FinancialAccount[]
   accountType       AccountType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  @@map("account_subtypes")
+  @@map("account_categories")
+}
+
+model Transaction {
+  id                  String              @id @default(cuid())
+  description         String
+  date                DateTime
+  amount              BigInt
+  accountId           String              @map("account_id")
+  categoryId          String              @map("category_id")
+  financialAccount    FinancialAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactionCategory TransactionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@map("transactions")
+}
+
+model TransactionType {
+  id                    String                @id @default(cuid())
+  name                  String
+  transactionCategories TransactionCategory[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@map("transaction_types")
+}
+
+model TransactionCategory {
+  id              String          @id @default(cuid())
+  name            String
+  typeId          String          @map("type_id")
+  transactions    Transaction[]
+  transactionType TransactionType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("transaction_cateogries")
 }

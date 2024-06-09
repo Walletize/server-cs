@@ -7,7 +7,7 @@ router.get('/', async (req, res) => {
     try {
         const accountTypes = await prisma.accountType.findMany({
             include: {
-                accountSubtypes: true,
+                accountCategories: true,
             }
         })
         
