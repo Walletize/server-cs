@@ -44,13 +44,14 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime? @map("email_verified")
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
+  id                String             @id @default(cuid())
+  name              String?
+  email             String?            @unique
+  emailVerified     DateTime?          @map("email_verified")
+  image             String?
+  accounts          Account[]
+  sessions          Session[]
+  financialAccounts FinancialAccount[]
 
   @@map("users")
 }
@@ -66,10 +67,12 @@ model VerificationToken {
 
 model FinancialAccount {
   id             String         @id @default(cuid())
-  userId         String         @map("name")
+  name           String
+  userId         String         @map("user_id")
   subtypeId      String         @map("subtype_id")
-  initialBalance BigInt
-  currentBalance BigInt
+  initialValue   BigInt
+  currentValue   BigInt
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountSubtype AccountSubtype @relation(fields: [subtypeId], references: [id], onDelete: Cascade)
 
   @@map("financial_accounts")

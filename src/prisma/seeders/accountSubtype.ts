@@ -24,4 +24,12 @@ export async function seedAccountSubtypes(prisma: PrismaClient) {
             typeId: "clx5u1bfc00002ae52il6rl6w",
         },
     })
+
+    await prisma.accountSubtype.create({
+        data: {
+            id: "clx68w4qv0000hncbdlkn0rof",
+            name: "Loan",
+            typeId: "clx68w4qv0000hpx1ulkn0rof",
+        },
+    })
 }
