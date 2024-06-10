@@ -14,7 +14,7 @@ generator client {
 }
 
 model Account {
-  id                String   @id @default(cuid())
+  id                String   @id @default(uuid())
   userId            String   @map("user_id")
   type              String
   provider          String
@@ -36,7 +36,7 @@ model Account {
 }
 
 model Session {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   sessionToken String   @unique @map("session_token")
   userId       String   @map("user_id")
   expires      DateTime
@@ -48,7 +48,7 @@ model Session {
 }
 
 model User {
-  id                String             @id @default(cuid())
+  id                String             @id @default(uuid())
   name              String?
   email             String?            @unique
   emailVerified     DateTime?          @map("email_verified")
@@ -74,7 +74,7 @@ model VerificationToken {
 }
 
 model FinancialAccount {
-  id              String          @id @default(cuid())
+  id              String          @id @default(uuid())
   name            String
   userId          String          @map("user_id")
   categoryId      String          @map("category_id")
@@ -90,7 +90,7 @@ model FinancialAccount {
 }
 
 model AccountType {
-  id                String            @id @default(cuid())
+  id                String            @id @default(uuid())
   name              String
   accountCategories AccountCategory[]
   createdAt         DateTime          @default(now())
@@ -100,9 +100,10 @@ model AccountType {
 }
 
 model AccountCategory {
-  id                String             @id @default(cuid())
+  id                String             @id @default(uuid())
   name              String
   typeId            String             @map("type_id")
+  icon              String
   financialAccounts FinancialAccount[]
   accountType       AccountType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
   createdAt         DateTime           @default(now())
@@ -112,7 +113,7 @@ model AccountCategory {
 }
 
 model Transaction {
-  id                  String              @id @default(cuid())
+  id                  String              @id @default(uuid())
   description         String
   date                DateTime
   amount              BigInt
@@ -127,7 +128,7 @@ model Transaction {
 }
 
 model TransactionType {
-  id                    String                @id @default(cuid())
+  id                    String                @id @default(uuid())
   name                  String
   transactionCategories TransactionCategory[]
   createdAt             DateTime              @default(now())
@@ -137,7 +138,7 @@ model TransactionType {
 }
 
 model TransactionCategory {
-  id              String          @id @default(cuid())
+  id              String          @id @default(uuid())
   name            String
   typeId          String          @map("type_id")
   transactions    Transaction[]

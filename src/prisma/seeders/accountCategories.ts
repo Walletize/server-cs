@@ -3,33 +3,37 @@ import { PrismaClient } from "@prisma/client"
 export async function seedAccountCategories(prisma: PrismaClient) {
     await prisma.accountCategory.create({
         data: {
-            id: "clx69iur800015zn8ev6keudb",
+            id: "ff23e0bc-9e9a-4c63-a49b-c4a74ced6410",
             name: "Bank Account",
-            typeId: "clx5u1bfc00002ae52il6rl6w",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
         },
     })
 
     await prisma.accountCategory.create({
         data: {
-            id: "clx69iura00035zn8w4m7l1gt",
+            id: "09c66fdd-c535-459e-b8cd-938a29e27f71",
             name: "Investment",
-            typeId: "clx5u1bfc00002ae52il6rl6w",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
         },
     })
 
     await prisma.accountCategory.create({
         data: {
-            id: "clx69iurb00055zn8a3fq0rek",
+            id: "36d773ba-3f9d-4916-9410-251915708ad7",
             name: "Real Estate",
-            typeId: "clx5u1bfc00002ae52il6rl6w",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
         },
     })
 
     await prisma.accountCategory.create({
         data: {
-            id: "clx68w4qv0000hncbdlkn0rof",
+            id: "85f7d600-0ee1-4ee7-b57a-ef0f71fa6323",
             name: "Loan",
-            typeId: "clx68w4qv0000hpx1ulkn0rof",
+            icon: "",
+            typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
         },
     })
 }
