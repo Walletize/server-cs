@@ -40,6 +40,13 @@ router.get('/:userId', async (req, res) => {
         const accounts = await prisma.financialAccount.findMany({
             where: {
                 userId: userId,
+            },
+            include: {
+                accountCategory: {
+                    include: {
+                        accountType: true
+                    }
+                }
             }
         })
 

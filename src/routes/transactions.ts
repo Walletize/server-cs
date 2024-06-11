@@ -37,18 +37,23 @@ router.get('/:userId', async (req, res) => {
     const userId = req.params.userId;
 
     try {
-        const accounts = await prisma.transaction.findMany({
+        const transactions = await prisma.transaction.findMany({
             where: {
                 financialAccount: {
                     userId: userId
                 }
             },
             include: {
-                financialAccount: true
+                financialAccount: true,
+                transactionCategory: {
+                    include: {
+                        transactionType: true
+                    }
+                }
             }
         })
 
-        const json = JSON.parse(JSON.stringify(accounts, (_, value) =>
+        const json = JSON.parse(JSON.stringify(transactions, (_, value) =>
             typeof value === 'bigint'
                 ? value.toString()
                 : value
