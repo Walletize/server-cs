@@ -7,7 +7,7 @@ router.post('/', async (req, res) => {
     try {
         const transaction = req.body;
 
-        await prisma.financialAccount.create({
+        await prisma.transaction.create({
             data: transaction
         });
 
@@ -44,7 +44,7 @@ router.get('/:userId', async (req, res) => {
                 }
             },
             include: {
-                financialAccount: true, // Include related FinancialAccount data
+                financialAccount: true
             }
         })
 
