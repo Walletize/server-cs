@@ -50,7 +50,12 @@ router.get('/:userId', async (req, res) => {
                         transactionType: true
                     }
                 }
-            }
+            },
+            orderBy: [
+                {
+                    date: 'desc',
+                },
+            ],
         })
 
         const json = JSON.parse(JSON.stringify(transactions, (_, value) =>
