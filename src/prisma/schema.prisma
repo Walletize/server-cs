@@ -26,8 +26,8 @@ model Account {
   scope             String?
   id_token          String?  @db.Text
   session_state     String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -41,8 +41,8 @@ model Session {
   userId       String   @map("user_id")
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("sessions")
 }
@@ -56,8 +56,8 @@ model User {
   accounts          Account[]
   sessions          Session[]
   financialAccounts FinancialAccount[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
 
   @@map("users")
 }
@@ -66,8 +66,8 @@ model VerificationToken {
   identifier String
   token      String
   expires    DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@unique([identifier, token])
   @@map("verification_tokens")
@@ -83,8 +83,8 @@ model FinancialAccount {
   transactions    Transaction[]
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountCategory AccountCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
 
   @@map("financial_accounts")
 }
@@ -93,8 +93,8 @@ model AccountType {
   id                String            @id @default(uuid())
   name              String
   accountCategories AccountCategory[]
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
   @@map("account_types")
 }
@@ -106,8 +106,8 @@ model AccountCategory {
   icon              String
   financialAccounts FinancialAccount[]
   accountType       AccountType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
 
   @@map("account_categories")
 }
@@ -121,8 +121,8 @@ model Transaction {
   categoryId          String              @map("category_id")
   financialAccount    FinancialAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transactionCategory TransactionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
 
   @@map("transactions")
 }
@@ -131,8 +131,8 @@ model TransactionType {
   id                    String                @id @default(uuid())
   name                  String
   transactionCategories TransactionCategory[]
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
 
   @@map("transaction_types")
 }
@@ -143,8 +143,8 @@ model TransactionCategory {
   typeId          String          @map("type_id")
   transactions    Transaction[]
   transactionType TransactionType @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
 
-  @@map("transaction_cateogries")
+  @@map("transaction_categories")
 }
