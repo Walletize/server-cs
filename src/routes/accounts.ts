@@ -64,4 +64,43 @@ router.get('/:userId', async (req, res) => {
 }
 );
 
+router.put('/:accountId', async (req, res) => {
+    const accountId = req.params.accountId;
+    const updatedAccount = req.body;
+
+    try {
+        await prisma.financialAccount.update({
+            where: {
+                id: accountId,
+            },
+            data: updatedAccount
+        });
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+router.delete('/:accountId', async (req, res) => {
+    const accountId = req.params.accountId;
+
+    try {
+        await prisma.financialAccount.delete({
+            where: {
+                id: accountId,
+            },
+        })
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+
 export default router;
