@@ -78,8 +78,8 @@ model FinancialAccount {
   name            String
   userId          String          @map("user_id")
   categoryId      String          @map("category_id")
-  initialValue    BigInt
-  currentValue    BigInt
+  initialValue    BigInt          @map("initial_value")
+  currentValue    BigInt          @map("current_value")
   transactions    Transaction[]
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountCategory AccountCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)

@@ -59,11 +59,22 @@ router.get('/:userId', async (req, res) => {
                                 'createdAt', tt.created_at,
                                 'updatedAt', tt.updated_at
                             )
+                        ),
+                        'financialAccount', json_build_object(
+                            'id', fa.id,
+                            'name', fa.name,
+                            'userId', fa.user_id,
+                            'categoryId', fa.category_id,
+                            'initialValue', fa.initial_value,
+                            'currentValue', fa.current_value,
+                            'createdAt', fa.created_at,
+                            'updatedAt', fa.updated_at
                         )
                     ) ORDER BY t.created_at DESC) AS transactions
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
+                JOIN financial_accounts fa ON t.account_id = fa.id
                 GROUP BY "transactionDate"
                 ORDER BY "transactionDate" DESC;
         `;
