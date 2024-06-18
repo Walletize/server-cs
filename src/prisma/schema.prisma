@@ -53,10 +53,10 @@ model User {
   email             String?            @unique
   emailVerified     DateTime?          @map("email_verified")
   image             String?
-  plan              String?
   accounts          Account[]
   sessions          Session[]
   financialAccounts FinancialAccount[]
+  subscriptions     Subscription[]
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
 
@@ -148,4 +148,26 @@ model TransactionCategory {
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
   @@map("transaction_categories")
+}
+
+model Subscription {
+  id               String           @id @default(uuid())
+  userId           String           @map("user_id")
+  typeId           String           @map("type_id")
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionType SubscriptionType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@map("subscriptions")
+}
+
+model SubscriptionType {
+  id            String         @id @default(uuid())
+  name          String
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  subscriptions Subscription[]
+
+  @@map("subscription_types")
 }
