@@ -42,7 +42,7 @@ router.get('/:userId', async (req, res) => {
     try {
         if (grouped == "daily") {
             if (startDateStr && startDateStr != "" && endDateStr && endDateStr != "") {
-                const groupedTransactions: any = await prisma.$queryRaw`
+                const rawGroupedTransactions: any = await prisma.$queryRaw`
             SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
                     SUM(t.amount) AS "totalAmount",
                     array_agg(json_build_object(
@@ -57,7 +57,7 @@ router.get('/:userId', async (req, res) => {
                             'typeId', tc.type_id,
                             'createdAt', tc.created_at,
                             'updatedAt', tc.updated_at,
-                            'type', json_build_object(
+                            'transactionType', json_build_object(
                                 'id', tt.id,
                                 'name', tt.name,
                                 'createdAt', tt.created_at,
@@ -79,20 +79,44 @@ router.get('/:userId', async (req, res) => {
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
-                WHERE t.date >= ${startDateStr}::date AND t.date < ${endDateStr}::date
+                WHERE fa.user_id = ${userId} AND t.date >= ${startDateStr}::date AND t.date < ${endDateStr}::date
                 GROUP BY "transactionDate"
                 ORDER BY "transactionDate" DESC;
         `;
 
-                const json = JSON.parse(JSON.stringify(groupedTransactions, (_, value) =>
+                const groupedTransactions = JSON.parse(JSON.stringify(rawGroupedTransactions, (_, value) =>
                     typeof value === 'bigint'
                         ? value.toString()
                         : value
                 ));
 
-                return res.status(200).json(json);
+                const totalIncome: any = await prisma.$queryRaw`
+                    SELECT SUM(t.amount) AS "totalIncome"
+                    FROM transactions t
+                    JOIN transaction_categories tc ON t.category_id = tc.id
+                    JOIN transaction_types tt ON tc.type_id = tt.id
+                    JOIN financial_accounts fa ON t.account_id = fa.id
+                    WHERE fa.user_id = ${userId} AND t.date >= ${startDateStr}::date AND t.date < ${endDateStr}::date AND tt.name = 'Income';
+                `;
+
+                const totalExpenses: any = await prisma.$queryRaw`
+                    SELECT SUM(t.amount) AS "totalExpenses"
+                    FROM transactions t
+                    JOIN transaction_categories tc ON t.category_id = tc.id
+                    JOIN transaction_types tt ON tc.type_id = tt.id
+                    JOIN financial_accounts fa ON t.account_id = fa.id
+                    WHERE fa.user_id = ${userId} AND t.date >= ${startDateStr}::date AND t.date < ${endDateStr}::date AND tt.name = 'Expense';
+                `;
+
+                const combinedResults = {
+                    totalIncome: totalIncome[0]?.totalIncome || 0,
+                    totalExpenses: totalExpenses[0]?.totalExpenses || 0,
+                    groupedTransactions
+                };
+
+                return res.status(200).json(combinedResults);
             } else {
-                const groupedTransactions: any = await prisma.$queryRaw`
+                const rawGroupedTransactions: any = await prisma.$queryRaw`
             SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
                     SUM(t.amount) AS "totalAmount",
                     array_agg(json_build_object(
@@ -107,7 +131,7 @@ router.get('/:userId', async (req, res) => {
                             'typeId', tc.type_id,
                             'createdAt', tc.created_at,
                             'updatedAt', tc.updated_at,
-                            'type', json_build_object(
+                            'transactionType', json_build_object(
                                 'id', tt.id,
                                 'name', tt.name,
                                 'createdAt', tt.created_at,
@@ -129,17 +153,43 @@ router.get('/:userId', async (req, res) => {
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
+                WHERE fa.user_id = ${userId}
                 GROUP BY "transactionDate"
                 ORDER BY "transactionDate" DESC;
         `;
-
-                const json = JSON.parse(JSON.stringify(groupedTransactions, (_, value) =>
+        
+                const groupedTransactions = JSON.parse(JSON.stringify(rawGroupedTransactions, (_, value) =>
                     typeof value === 'bigint'
                         ? value.toString()
                         : value
                 ));
 
-                return res.status(200).json(json);
+                const totalIncome: any = await prisma.$queryRaw`
+                    SELECT SUM(t.amount) AS "totalIncome"
+                    FROM transactions t
+                    JOIN transaction_categories tc ON t.category_id = tc.id
+                    JOIN transaction_types tt ON tc.type_id = tt.id
+                    JOIN financial_accounts fa ON t.account_id = fa.id
+                    WHERE fa.user_id = ${userId} AND tt.name = 'Income';
+                `;
+
+                const totalExpenses: any = await prisma.$queryRaw`
+                    SELECT SUM(t.amount) AS "totalExpenses"
+                    FROM transactions t
+                    JOIN transaction_categories tc ON t.category_id = tc.id
+                    JOIN transaction_types tt ON tc.type_id = tt.id
+                    JOIN financial_accounts fa ON t.account_id = fa.id
+                    WHERE fa.user_id = ${userId} AND tt.name = 'Expense';
+                `;
+
+                const combinedResults = {
+                    totalIncome: totalIncome[0]?.totalIncome || 0,
+                    totalExpenses: totalExpenses[0]?.totalExpenses || 0,
+                    groupedTransactions
+                };
+
+
+                return res.status(200).json(combinedResults);
             }
         } else {
             const transactions = await prisma.transaction.findMany({
