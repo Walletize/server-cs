@@ -49,6 +49,7 @@ router.get('/:userId', async (req, res) => {
                         'id', t.id,
                         'description', t.description,
                         'amount', t.amount,
+                        'date', t.date,
                         'createdAt', t.created_at,
                         'updatedAt', t.updated_at,
                         'transactionCategory', json_build_object(
@@ -123,6 +124,7 @@ router.get('/:userId', async (req, res) => {
                         'id', t.id,
                         'description', t.description,
                         'amount', t.amount,
+                        'date', t.date,
                         'createdAt', t.created_at,
                         'updatedAt', t.updated_at,
                         'transactionCategory', json_build_object(
@@ -227,5 +229,43 @@ router.get('/:userId', async (req, res) => {
     }
 }
 );
+
+router.put('/:transactionId', async (req, res) => {
+    const transactionId = req.params.transactionId;
+    const updatedAccount = req.body;
+
+    try {
+        await prisma.transaction.update({
+            where: {
+                id: transactionId,
+            },
+            data: updatedAccount
+        });
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+router.delete('/:transactionId', async (req, res) => {
+    const transactionId = req.params.transactionId;
+
+    try {
+        await prisma.transaction.delete({
+            where: {
+                id: transactionId,
+            },
+        })
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
 
 export default router;
