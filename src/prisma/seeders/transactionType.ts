@@ -21,4 +21,11 @@ export async function seedTransactionTypes(prisma: PrismaClient) {
             name: "Transfer"
         },
     })
+
+    await prisma.transactionType.create({
+        data: {
+            id: "d2d456d8-79c4-458e-8ddc-104042c29a9a",
+            name: "Update"
+        },
+    })
 }
