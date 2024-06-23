@@ -118,16 +118,16 @@ model AccountCategory {
 }
 
 model Transaction {
-  id                  String              @id @default(uuid())
+  id                  String               @id @default(uuid())
   description         String
   date                DateTime
   amount              BigInt
-  accountId           String              @map("account_id")
-  categoryId          String              @map("category_id")
-  financialAccount    FinancialAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  transactionCategory TransactionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  createdAt           DateTime            @default(now()) @map("created_at")
-  updatedAt           DateTime            @updatedAt @map("updated_at")
+  accountId           String               @map("account_id")
+  categoryId          String?              @map("category_id")
+  financialAccount    FinancialAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactionCategory TransactionCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
 
   @@map("transactions")
 }
