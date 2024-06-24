@@ -1,5 +1,6 @@
 import express from 'express';
 import { prisma } from "../app";
+import { FinancialAccount } from '@prisma/client';
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ router.get('/:accountId', async (req, res) => {
     const accountId = req.params.accountId;
 
     try {
-        const accounts = await prisma.$queryRaw`
+        const account: FinancialAccount[] = await prisma.$queryRaw`
             SELECT 
                 fa.id AS "id",
                 fa.name AS "name",
@@ -76,12 +77,14 @@ router.get('/:accountId', async (req, res) => {
                 fa.id, ac.id, at.id
         `;
 
-        const json = JSON.parse(JSON.stringify(accounts, (_, value) =>
+        const json = JSON.parse(JSON.stringify(account, (_, value) =>
             typeof value === 'bigint'
                 ? value.toString()
                 : value
         ));
-        return res.status(200).json(json);
+        console.log(json)
+
+        return res.status(200).json(json[0]);
     } catch (e) {
         console.error(e);
 
