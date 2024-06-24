@@ -77,7 +77,6 @@ router.get('/:userId', async (req, res) => {
                             'userId', fa.user_id,
                             'categoryId', fa.category_id,
                             'initialValue', fa.initial_value,
-                            'currentValue', fa.current_value,
                             'createdAt', fa.created_at,
                             'updatedAt', fa.updated_at
                         )
