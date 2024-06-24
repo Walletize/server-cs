@@ -33,22 +33,105 @@ router.get('/types', async (req, res) => {
 }
 );
 
-router.get('/:userId', async (req, res) => {
+router.get('/:accountId', async (req, res) => {
+    const accountId = req.params.accountId;
+
+    try {
+        const accounts = await prisma.$queryRaw`
+            SELECT 
+                fa.id AS "id",
+                fa.name AS "name",
+                fa.user_id AS "userId",
+                fa.category_id AS "categoryId",
+                fa.initial_value AS "initialValue",
+                fa.created_at AS "createdAt",
+                fa.updated_at AS "updatedAt",
+                jsonb_build_object(
+                    'id', ac.id,
+                    'name', ac.name,
+                    'typeId', ac.type_id,
+                    'userId', ac.user_id,
+                    'icon', ac.icon,
+                    'createdAt', ac.created_at,
+                    'updatedAt', ac.updated_at,
+                    'accountType', jsonb_build_object(
+                        'id', at.id,
+                        'name', at.name,
+                        'createdAt', at.created_at,
+                        'updatedAt', at.updated_at
+                    )
+                ) AS "accountCategory",
+                COALESCE(SUM(t.amount), 0) AS "currentValue"
+            FROM 
+                financial_accounts fa
+            JOIN 
+                account_categories ac ON fa.category_id = ac.id
+            JOIN 
+                account_types at ON ac.type_id = at.id
+            LEFT JOIN 
+                transactions t ON fa.id = t.account_id
+            WHERE 
+                fa.id = ${accountId}
+            GROUP BY 
+                fa.id, ac.id, at.id
+        `;
+
+        const json = JSON.parse(JSON.stringify(accounts, (_, value) =>
+            typeof value === 'bigint'
+                ? value.toString()
+                : value
+        ));
+        return res.status(200).json(json);
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+}
+);
+
+router.get('/user/:userId', async (req, res) => {
     const userId = req.params.userId;
 
     try {
-        const accounts = await prisma.financialAccount.findMany({
-            where: {
-                userId: userId,
-            },
-            include: {
-                accountCategory: {
-                    include: {
-                        accountType: true
-                    }
-                }
-            }
-        })
+        const accounts = await prisma.$queryRaw`
+            SELECT 
+                fa.id AS "id",
+                fa.name AS "name",
+                fa.user_id AS "userId",
+                fa.category_id AS "categoryId",
+                fa.initial_value AS "initialValue",
+                fa.created_at AS "createdAt",
+                fa.updated_at AS "updatedAt",
+                jsonb_build_object(
+                    'id', ac.id,
+                    'name', ac.name,
+                    'typeId', ac.type_id,
+                    'userId', ac.user_id,
+                    'icon', ac.icon,
+                    'createdAt', ac.created_at,
+                    'updatedAt', ac.updated_at,
+                    'accountType', jsonb_build_object(
+                        'id', at.id,
+                        'name', at.name,
+                        'createdAt', at.created_at,
+                        'updatedAt', at.updated_at
+                    )
+                ) AS "accountCategory",
+                COALESCE(SUM(t.amount), 0) AS "currentValue"
+            FROM 
+                financial_accounts fa
+            JOIN 
+                account_categories ac ON fa.category_id = ac.id
+            JOIN 
+                account_types at ON ac.type_id = at.id
+            LEFT JOIN 
+                transactions t ON fa.id = t.account_id
+            WHERE 
+                fa.user_id = ${userId}
+            GROUP BY 
+                fa.id, ac.id, at.id
+        `;
 
         const json = JSON.parse(JSON.stringify(accounts, (_, value) =>
             typeof value === 'bigint'
