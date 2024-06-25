@@ -62,7 +62,7 @@ router.get('/:accountId', async (req, res) => {
                         'updatedAt', at.updated_at
                     )
                 ) AS "accountCategory",
-                COALESCE(SUM(t.amount), 0) AS "currentValue"
+                fa.initial_value + COALESCE(SUM(t.amount), 0) AS "currentValue"
             FROM 
                 financial_accounts fa
             JOIN 
@@ -82,7 +82,6 @@ router.get('/:accountId', async (req, res) => {
                 ? value.toString()
                 : value
         ));
-        console.log(json)
 
         return res.status(200).json(json[0]);
     } catch (e) {
@@ -95,9 +94,10 @@ router.get('/:accountId', async (req, res) => {
 
 router.get('/user/:userId', async (req, res) => {
     const userId = req.params.userId;
+    const countTotalValues = req.query.countTotalValues;
 
     try {
-        const accounts = await prisma.$queryRaw`
+        const rawAccounts = await prisma.$queryRaw`
             SELECT 
                 fa.id AS "id",
                 fa.name AS "name",
@@ -121,7 +121,7 @@ router.get('/user/:userId', async (req, res) => {
                         'updatedAt', at.updated_at
                     )
                 ) AS "accountCategory",
-                COALESCE(SUM(t.amount), 0) AS "currentValue"
+                fa.initial_value + COALESCE(SUM(t.amount), 0) AS "currentValue"
             FROM 
                 financial_accounts fa
             JOIN 
@@ -136,12 +136,67 @@ router.get('/user/:userId', async (req, res) => {
                 fa.id, ac.id, at.id
         `;
 
-        const json = JSON.parse(JSON.stringify(accounts, (_, value) =>
+        const accounts = JSON.parse(JSON.stringify(rawAccounts, (_, value) =>
             typeof value === 'bigint'
                 ? value.toString()
                 : value
         ));
-        return res.status(200).json(json);
+
+        if (countTotalValues) {
+            const totalAssets: { totalAssets: number }[] = await prisma.$queryRaw`
+            SELECT 
+                SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalAssets"
+            FROM 
+                financial_accounts fa
+            JOIN 
+                account_categories ac ON fa.category_id = ac.id
+            JOIN 
+                account_types at ON ac.type_id = at.id
+            LEFT JOIN (
+                SELECT 
+                    account_id, 
+                    SUM(amount) AS totalAmount
+                FROM 
+                    transactions
+                GROUP BY 
+                    account_id
+            ) t ON fa.id = t.account_id
+            WHERE 
+                at.name = 'Asset'
+        `;
+
+            const totalLiabilities: { totalLiabilities: number }[] = await prisma.$queryRaw`
+            SELECT 
+                SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalLiabilities"
+            FROM 
+                financial_accounts fa
+            JOIN 
+                account_categories ac ON fa.category_id = ac.id
+            JOIN 
+                account_types at ON ac.type_id = at.id
+            LEFT JOIN (
+                SELECT 
+                    account_id, 
+                    SUM(amount) AS totalAmount
+                FROM 
+                    transactions
+                GROUP BY 
+                    account_id
+            ) t ON fa.id = t.account_id
+            WHERE 
+                at.name = 'Liability'
+        `;
+        
+            const combinedResults = {
+                totalAssets: totalAssets[0].totalAssets ? totalAssets[0].totalAssets : 0,
+                totalLiabilities: totalLiabilities[0].totalLiabilities ? totalLiabilities[0].totalLiabilities : 0,
+                accounts
+            };
+
+            return res.status(200).json(combinedResults);
+        } else {
+            return res.status(200).json(accounts);
+        }
     } catch (e) {
         console.error(e);
 

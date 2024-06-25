@@ -97,22 +97,22 @@ router.get('/:userId', async (req, res) => {
             ));
 
             const totalIncome: any = await prisma.$queryRaw`
-                    SELECT SUM(t.amount) AS "totalIncome"
-                    FROM transactions t
-                    JOIN transaction_categories tc ON t.category_id = tc.id
-                    JOIN transaction_types tt ON tc.type_id = tt.id
-                    JOIN financial_accounts fa ON t.account_id = fa.id
-                    ${whereClause} AND tt.name = 'Income'
-                `;
+                SELECT SUM(t.amount) AS "totalIncome"
+                FROM transactions t
+                JOIN transaction_categories tc ON t.category_id = tc.id
+                JOIN transaction_types tt ON tc.type_id = tt.id
+                JOIN financial_accounts fa ON t.account_id = fa.id
+                ${whereClause} AND tt.name = 'Income'
+            `;
 
             const totalExpenses: any = await prisma.$queryRaw`
-                    SELECT SUM(t.amount) AS "totalExpenses"
-                    FROM transactions t
-                    JOIN transaction_categories tc ON t.category_id = tc.id
-                    JOIN transaction_types tt ON tc.type_id = tt.id
-                    JOIN financial_accounts fa ON t.account_id = fa.id
-                    ${whereClause} AND tt.name = 'Expense'
-                `;
+                SELECT SUM(t.amount) AS "totalExpenses"
+                FROM transactions t
+                JOIN transaction_categories tc ON t.category_id = tc.id
+                JOIN transaction_types tt ON tc.type_id = tt.id
+                JOIN financial_accounts fa ON t.account_id = fa.id
+                ${whereClause} AND tt.name = 'Expense'
+            `;
 
             const combinedResults = {
                 totalIncome: totalIncome[0]?.totalIncome || 0,
