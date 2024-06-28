@@ -125,6 +125,7 @@ model Transaction {
   description         String
   date                DateTime
   amount              BigInt
+  rate                Float?
   accountId           String               @map("account_id")
   categoryId          String?              @map("category_id")
   currencyId          String               @map("currency_id")
