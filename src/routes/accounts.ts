@@ -121,6 +121,15 @@ router.get('/user/:userId', async (req, res) => {
                         'updatedAt', at.updated_at
                     )
                 ) AS "accountCategory",
+                jsonb_build_object(
+                    'id', c.id,
+                    'code', c.code,
+                    'name', c.name,
+                    'symbol', c.symbol,
+                    'rate', c.rate,
+                    'createdAt', at.created_at,
+                    'updatedAt', at.updated_at
+                ) AS "currency",
                 fa.initial_value + COALESCE(SUM(t.amount), 0) AS "currentValue"
             FROM 
                 financial_accounts fa
@@ -130,10 +139,12 @@ router.get('/user/:userId', async (req, res) => {
                 account_types at ON ac.type_id = at.id
             LEFT JOIN 
                 transactions t ON fa.id = t.account_id
+            JOIN 
+                currencies c ON fa.currency_id = c.id
             WHERE 
                 fa.user_id = ${userId}
             GROUP BY 
-                fa.id, ac.id, at.id
+                fa.id, ac.id, at.id, c.id
         `;
 
         const accounts = JSON.parse(JSON.stringify(rawAccounts, (_, value) =>
