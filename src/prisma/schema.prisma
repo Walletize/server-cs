@@ -53,6 +53,8 @@ model User {
   email                 String?               @unique
   emailVerified         DateTime?             @map("email_verified")
   image                 String?
+  mainCurrencyId        String                @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
+  mainCurrency          Currency              @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
   accounts              Account[]
   sessions              Session[]
   financialAccounts     FinancialAccount[]
@@ -185,11 +187,13 @@ model Currency {
   id           String             @id @default(uuid())
   code         String             @unique
   name         String
+  symbol       String
   rate         Float
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @updatedAt @map("updated_at")
   accounts     FinancialAccount[]
   transactions Transaction[]
+  users        User[]
 
   @@map("currencies")
 }
