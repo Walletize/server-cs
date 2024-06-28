@@ -3,6 +3,7 @@ import { seedAccountTypes } from "./accountType";
 import { seedAccountCategories } from "./accountCategories";
 import { seedTransactionTypes } from "./transactionType";
 import { seedTransactionCategories } from "./transactionCategory";
+import { seedCurrencies } from "./currency";
 
 const prisma = new PrismaClient()
 
@@ -11,6 +12,7 @@ async function main() {
     await seedAccountCategories(prisma)
     await seedTransactionTypes(prisma)
     await seedTransactionCategories(prisma)
+    await seedCurrencies(prisma)
 }
 
 main()

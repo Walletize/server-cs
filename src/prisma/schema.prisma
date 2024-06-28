@@ -81,10 +81,12 @@ model FinancialAccount {
   name            String
   userId          String          @map("user_id")
   categoryId      String          @map("category_id")
+  currencyId      String          @map("currency_id")
   initialValue    BigInt          @map("initial_value")
   transactions    Transaction[]
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountCategory AccountCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  currency        Currency        @relation(fields: [currencyId], references: [id], onDelete: Cascade)
   createdAt       DateTime        @default(now()) @map("created_at")
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
@@ -123,8 +125,10 @@ model Transaction {
   amount              BigInt
   accountId           String               @map("account_id")
   categoryId          String?              @map("category_id")
+  currencyId          String               @map("currency_id")
   financialAccount    FinancialAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transactionCategory TransactionCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  currency            Currency             @relation(fields: [currencyId], references: [id], onDelete: Cascade)
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
 
@@ -175,4 +179,17 @@ model SubscriptionType {
   subscriptions Subscription[]
 
   @@map("subscription_types")
+}
+
+model Currency {
+  id           String             @id @default(uuid())
+  code         String
+  name         String
+  rate         Float
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  accounts     FinancialAccount[]
+  transactions Transaction[]
+
+  @@map("currencies")
 }
