@@ -5,7 +5,13 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
     try {
-        const currencies = await prisma.currency.findMany();
+        const currencies = await prisma.currency.findMany({
+            orderBy: [
+                {
+                    code: 'asc',
+                },
+            ],
+        });
 
         return res.status(200).json(currencies);
     } catch (e) {

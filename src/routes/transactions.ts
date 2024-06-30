@@ -79,12 +79,22 @@ router.get('/account/:accountId', async (req, res) => {
                             'initialValue', fa.initial_value,
                             'createdAt', fa.created_at,
                             'updatedAt', fa.updated_at
+                        ),
+                        'currency', json_build_object(
+                            'id', c.id,
+                            'code', c.code,
+                            'name', c.name,
+                            'symbol', c.symbol,
+                            'rate', c.rate,
+                            'createdAt', c.created_at,
+                            'updatedAt', c.updated_at
                         )
                     ) ORDER BY t.created_at DESC) AS transactions
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN currencies c ON t.currency_id = c.id
                 ${whereClause}
                 GROUP BY "transactionDate"
                 ORDER BY "transactionDate" DESC;
@@ -179,7 +189,14 @@ router.get('/user/:userId', async (req, res) => {
                         'id', t.id,
                         'description', t.description,
                         'amount', t.amount,
+                        'convertedAmount', CASE 
+                            WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                            ELSE t.amount 
+                        END,
                         'date', t.date,
+                        'rate', t.rate,
+                        'accountId', t.account_id,
+                        'currencyId', t.currency_id,
                         'createdAt', t.created_at,
                         'updatedAt', t.updated_at,
                         'transactionCategory', json_build_object(
@@ -200,15 +217,36 @@ router.get('/user/:userId', async (req, res) => {
                             'name', fa.name,
                             'userId', fa.user_id,
                             'categoryId', fa.category_id,
+                            'currencyId', fa.currency_id,
                             'initialValue', fa.initial_value,
                             'createdAt', fa.created_at,
-                            'updatedAt', fa.updated_at
+                            'updatedAt', fa.updated_at,
+                            'currency', json_build_object(
+                                'id', fc.id,
+                                'code', fc.code,
+                                'name', fc.name,
+                                'symbol', fc.symbol,
+                                'rate', fc.rate,
+                                'createdAt', fc.created_at,
+                                'updatedAt', fc.updated_at
+                            )
+                        ),
+                        'currency', json_build_object(
+                            'id', c.id,
+                            'code', c.code,
+                            'name', c.name,
+                            'symbol', c.symbol,
+                            'rate', c.rate,
+                            'createdAt', c.created_at,
+                            'updatedAt', c.updated_at
                         )
                     ) ORDER BY t.created_at DESC) AS transactions
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN currencies c ON t.currency_id = c.id
+                JOIN currencies fc ON fa.currency_id = fc.id
                 ${whereClause}
                 GROUP BY "transactionDate"
                 ORDER BY "transactionDate" DESC;

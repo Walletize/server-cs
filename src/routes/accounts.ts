@@ -103,6 +103,7 @@ router.get('/user/:userId', async (req, res) => {
                 fa.name AS "name",
                 fa.user_id AS "userId",
                 fa.category_id AS "categoryId",
+                fa.currency_id AS "currencyId",
                 fa.initial_value AS "initialValue",
                 fa.created_at AS "createdAt",
                 fa.updated_at AS "updatedAt",
@@ -127,24 +128,17 @@ router.get('/user/:userId', async (req, res) => {
                     'name', c.name,
                     'symbol', c.symbol,
                     'rate', c.rate,
-                    'createdAt', at.created_at,
-                    'updatedAt', at.updated_at
+                    'createdAt', c.created_at,
+                    'updatedAt', c.updated_at
                 ) AS "currency",
                 fa.initial_value + COALESCE(SUM(t.amount), 0) AS "currentValue"
-            FROM 
-                financial_accounts fa
-            JOIN 
-                account_categories ac ON fa.category_id = ac.id
-            JOIN 
-                account_types at ON ac.type_id = at.id
-            LEFT JOIN 
-                transactions t ON fa.id = t.account_id
-            JOIN 
-                currencies c ON fa.currency_id = c.id
-            WHERE 
-                fa.user_id = ${userId}
-            GROUP BY 
-                fa.id, ac.id, at.id, c.id
+            FROM financial_accounts fa
+            JOIN account_categories ac ON fa.category_id = ac.id
+            JOIN account_types at ON ac.type_id = at.id
+            LEFT JOIN transactions t ON fa.id = t.account_id
+            JOIN currencies c ON fa.currency_id = c.id
+            WHERE fa.user_id = ${userId}
+            GROUP BY fa.id, ac.id, at.id, c.id
         `;
 
         const accounts = JSON.parse(JSON.stringify(rawAccounts, (_, value) =>
