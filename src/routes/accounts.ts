@@ -19,11 +19,20 @@ router.post('/', async (req, res) => {
 }
 );
 
-router.get('/types', async (req, res) => {
+router.get('/types/:userId', async (req, res) => {
+    const userId = req.params.userId;
+
     try {
         const accountTypes = await prisma.accountType.findMany({
             include: {
-                accountCategories: true,
+                accountCategories: {
+                    where: {
+                        OR: [
+                            { userId: null },
+                            { userId: userId }
+                        ]
+                    }
+                },
             }
         })
         
