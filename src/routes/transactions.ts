@@ -19,11 +19,17 @@ router.post('/', async (req, res) => {
 }
 );
 
-router.get('/types', async (req, res) => {
+router.get('/types/:userId', async (req, res) => {
+    const userId = req.params.userId;
+
     try {
         const transactionTypes = await prisma.transactionType.findMany({
             include: {
-                transactionCategories: true,
+                transactionCategories: {
+                    where: {
+                        userId: userId
+                    }
+                },
             }
         })
 
@@ -349,6 +355,255 @@ router.delete('/:transactionId', async (req, res) => {
                 id: transactionId,
             },
         })
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+router.post('/categories/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    const category = req.body;
+
+    try {
+        if (Object.keys(category).length === 0) {
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Salary",
+                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Business",
+                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Gifts",
+                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Insurance Payout",
+                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Investments",
+                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Loan",
+                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Other",
+                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Bills & Fees",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Entertainment",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Car",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Beauty",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Education",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Family & Personal",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Food & Drink",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Gifts",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Groceries",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Healthcare",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Home",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Shopping",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Sport & Hobbies",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Transport",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Travel",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Work",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+
+            await prisma.transactionCategory.create({
+                data: {
+                    name: "Other",
+                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
+                    userId: userId,
+                },
+            });
+        } else {
+            await prisma.accountCategory.create({
+                data: category
+            });
+        }
+
+        return res.status(200).json();
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+router.put('/categories/:categoryId', async (req, res) => {
+    const categoryId = req.params.categoryId;
+    const updatedCategory = req.body;
+
+    try {
+        await prisma.transactionCategory.update({
+            where: {
+                id: categoryId,
+            },
+            data: updatedCategory
+        });
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+router.delete('/categories/:categoryId', async (req, res) => {
+    const categoryId = req.params.categoryId;
+
+    try {
+        await prisma.transactionCategory.delete({
+            where: {
+                id: categoryId,
+            },
+        });
 
         return res.status(200).json({ message: "Success" });
     } catch (e) {

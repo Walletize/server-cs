@@ -10,7 +10,6 @@ const prisma = new PrismaClient()
 async function main() {
     await seedAccountTypes(prisma)
     await seedTransactionTypes(prisma)
-    await seedTransactionCategories(prisma)
     await seedCurrencies(prisma)
 }
 

@@ -27,10 +27,7 @@ router.get('/types/:userId', async (req, res) => {
             include: {
                 accountCategories: {
                     where: {
-                        OR: [
-                            { userId: null },
-                            { userId: userId }
-                        ]
+                        userId: userId
                     }
                 },
             }
@@ -262,10 +259,10 @@ router.post('/categories/:userId', async (req, res) => {
     const category = req.body;
 
     try {
-        if (category) {
+        if (Object.keys(category).length === 0) {
             await prisma.accountCategory.create({
                 data: {
-                    name: "Bank Account",
+                    name: "Checking Account",
                     icon: "",
                     typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
                     userId: userId,
@@ -274,7 +271,34 @@ router.post('/categories/:userId', async (req, res) => {
 
             await prisma.accountCategory.create({
                 data: {
-                    name: "Investment",
+                    name: "Savings Account",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Cash",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Stocks",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Cryptocurrencies",
                     icon: "",
                     typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
                     userId: userId,
@@ -292,7 +316,97 @@ router.post('/categories/:userId', async (req, res) => {
 
             await prisma.accountCategory.create({
                 data: {
+                    name: "Vehicle",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Retirement Accounts",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Gold",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Insurance",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Collectibles",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Other",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
                     name: "Loan",
+                    icon: "",
+                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Credit Card",
+                    icon: "",
+                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Bills",
+                    icon: "",
+                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Mortgage",
+                    icon: "",
+                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Other",
                     icon: "",
                     typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
                     userId: userId,
@@ -307,9 +421,48 @@ router.post('/categories/:userId', async (req, res) => {
         return res.status(200).json();
     } catch (e) {
         console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
     }
-}
-);
+});
+
+router.put('/categories/:categoryId', async (req, res) => {
+    const categoryId = req.params.categoryId;
+    const updatedCategory = req.body;
+
+    try {
+        await prisma.accountCategory.update({
+            where: {
+                id: categoryId,
+            },
+            data: updatedCategory
+        });
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+router.delete('/categories/:categoryId', async (req, res) => {
+    const categoryId = req.params.categoryId;
+
+    try {
+        await prisma.accountCategory.delete({
+            where: {
+                id: categoryId,
+            },
+        });
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
 
 
 export default router;
