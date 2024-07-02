@@ -257,5 +257,59 @@ router.delete('/:accountId', async (req, res) => {
     }
 });
 
+router.post('/categories/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    const category = req.body;
+
+    try {
+        if (category) {
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Bank Account",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Investment",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Real Estate",
+                    icon: "",
+                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+                    userId: userId,
+                },
+            })
+
+            await prisma.accountCategory.create({
+                data: {
+                    name: "Loan",
+                    icon: "",
+                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+                    userId: userId,
+                },
+            })
+        } else {
+            await prisma.accountCategory.create({
+                data: category
+            });
+        }
+
+        return res.status(200).json();
+    } catch (e) {
+        console.error(e);
+    }
+}
+);
+
 
 export default router;
