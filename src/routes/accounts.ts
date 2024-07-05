@@ -149,9 +149,9 @@ router.get('/user/:userId', async (req, res) => {
             FROM financial_accounts fa
             JOIN account_categories ac ON fa.category_id = ac.id
             JOIN account_types at ON ac.type_id = at.id
-            JOIN transactions t ON fa.id = t.account_id
-            JOIN currencies fc ON fa.currency_id = fc.id
-            JOIN currencies tc ON t.currency_id = tc.id
+            LEFT JOIN transactions t ON fa.id = t.account_id
+            LEFT JOIN currencies fc ON fa.currency_id = fc.id
+            LEFT JOIN currencies tc ON t.currency_id = tc.id
             WHERE fa.user_id = ${userId}
             GROUP BY fa.id, ac.id, at.id, fc.id
         `;
