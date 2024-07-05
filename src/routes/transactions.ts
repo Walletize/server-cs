@@ -190,7 +190,12 @@ router.get('/user/:userId', async (req, res) => {
 
             const rawGroupedTransactions: any = await prisma.$queryRaw`
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
-                    SUM(t.amount) AS "totalAmount",
+                    SUM(
+                        CASE 
+                            WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                            ELSE t.amount 
+                        END
+                    ) AS "totalAmount",
                     array_agg(json_build_object(
                         'id', t.id,
                         'description', t.description,
@@ -235,6 +240,15 @@ router.get('/user/:userId', async (req, res) => {
                                 'rate', fc.rate,
                                 'createdAt', fc.created_at,
                                 'updatedAt', fc.updated_at
+                            ),
+                            'accountCategory', json_build_object(
+                                'id', ac.id,
+                                'name', ac.name,
+                                'typeId', ac.type_id,
+                                'userId', ac.user_id,
+                                'icon', ac.icon,
+                                'createdAt', ac.created_at,
+                                'updatedAt', ac.updated_at
                             )
                         ),
                         'currency', json_build_object(
@@ -251,6 +265,7 @@ router.get('/user/:userId', async (req, res) => {
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN account_categories ac ON fa.category_id = ac.id
                 JOIN currencies c ON t.currency_id = c.id
                 JOIN currencies fc ON fa.currency_id = fc.id
                 ${whereClause}
