@@ -129,22 +129,31 @@ router.get('/user/:userId', async (req, res) => {
                     )
                 ) AS "accountCategory",
                 jsonb_build_object(
-                    'id', c.id,
-                    'code', c.code,
-                    'name', c.name,
-                    'symbol', c.symbol,
-                    'rate', c.rate,
-                    'createdAt', c.created_at,
-                    'updatedAt', c.updated_at
+                    'id', fc.id,
+                    'code', fc.code,
+                    'name', fc.name,
+                    'symbol', fc.symbol,
+                    'rate', fc.rate,
+                    'createdAt', fc.created_at,
+                    'updatedAt', fc.updated_at
                 ) AS "currency",
-                fa.initial_value + COALESCE(SUM(t.amount), 0) AS "currentValue"
+                    fa.initial_value + COALESCE(
+                        SUM(
+                            CASE 
+                                WHEN t.currency_id != fa.currency_id THEN t.amount / tc.rate * fc.rate
+                                ELSE t.amount 
+                            END
+                        ), 
+                        0
+                    ) AS "currentValue"
             FROM financial_accounts fa
             JOIN account_categories ac ON fa.category_id = ac.id
             JOIN account_types at ON ac.type_id = at.id
-            LEFT JOIN transactions t ON fa.id = t.account_id
-            JOIN currencies c ON fa.currency_id = c.id
+            JOIN transactions t ON fa.id = t.account_id
+            JOIN currencies fc ON fa.currency_id = fc.id
+            JOIN currencies tc ON t.currency_id = tc.id
             WHERE fa.user_id = ${userId}
-            GROUP BY fa.id, ac.id, at.id, c.id
+            GROUP BY fa.id, ac.id, at.id, fc.id
         `;
 
         const accounts = JSON.parse(JSON.stringify(rawAccounts, (_, value) =>
