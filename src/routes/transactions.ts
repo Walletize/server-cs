@@ -280,20 +280,34 @@ router.get('/user/:userId', async (req, res) => {
             ));
 
             const totalIncome: any = await prisma.$queryRaw`
-                SELECT SUM(t.amount) AS "totalIncome"
+                SELECT SUM(
+                    CASE
+                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                        ELSE t.amount
+                    END
+                ) AS "totalIncome"
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN currencies c ON t.currency_id = c.id
+                JOIN currencies fc ON fa.currency_id = fc.id
                 ${whereClause} AND tt.name = 'Income'
             `;
 
             const totalExpenses: any = await prisma.$queryRaw`
-                SELECT SUM(t.amount) AS "totalExpenses"
+                SELECT SUM(
+                    CASE
+                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                        ELSE t.amount
+                    END
+                ) AS "totalExpenses"
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN currencies c ON t.currency_id = c.id
+                JOIN currencies fc ON fa.currency_id = fc.id
                 ${whereClause} AND tt.name = 'Expense'
             `;
 
