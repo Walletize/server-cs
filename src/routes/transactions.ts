@@ -61,7 +61,13 @@ router.get('/account/:accountId', async (req, res) => {
                         'id', t.id,
                         'description', t.description,
                         'amount', t.amount,
+                        'convertedAmount', CASE 
+                            WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                            ELSE t.amount 
+                        END,
                         'date', t.date,
+                        'accountId', t.account_id,
+                        'currencyId', t.currency_id,
                         'createdAt', t.created_at,
                         'updatedAt', t.updated_at,
                         'transactionCategory', json_build_object(
@@ -82,9 +88,19 @@ router.get('/account/:accountId', async (req, res) => {
                             'name', fa.name,
                             'userId', fa.user_id,
                             'categoryId', fa.category_id,
+                            'currencyId', fa.currency_id,
                             'initialValue', fa.initial_value,
                             'createdAt', fa.created_at,
-                            'updatedAt', fa.updated_at
+                            'updatedAt', fa.updated_at,
+                            'currency', json_build_object(
+                                'id', fc.id,
+                                'code', fc.code,
+                                'name', fc.name,
+                                'symbol', fc.symbol,
+                                'rate', fc.rate,
+                                'createdAt', fc.created_at,
+                                'updatedAt', fc.updated_at
+                            )
                         ),
                         'currency', json_build_object(
                             'id', c.id,
@@ -101,6 +117,7 @@ router.get('/account/:accountId', async (req, res) => {
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
                 JOIN currencies c ON t.currency_id = c.id
+                JOIN currencies fc ON fa.currency_id = fc.id
                 ${whereClause}
                 GROUP BY "transactionDate"
                 ORDER BY "transactionDate" DESC;
