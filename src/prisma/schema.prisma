@@ -129,9 +129,11 @@ model Transaction {
   accountId           String               @map("account_id")
   categoryId          String?              @map("category_id")
   currencyId          String               @map("currency_id")
+  transferId          String?              @map("transfer_id")
   financialAccount    FinancialAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transactionCategory TransactionCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   currency            Currency             @relation(fields: [currencyId], references: [id], onDelete: Cascade)
+  transactionTransfer TransactionTransfer?  @relation(fields: [transferId], references: [id], onDelete: Cascade)
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
 
@@ -160,6 +162,17 @@ model TransactionCategory {
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
   @@map("transaction_categories")
+}
+
+model TransactionTransfer {
+  id              String          @id @default(uuid())
+  fromAccountId   String          @map("type_id")
+  toAccountId     String          @map("user_id")
+  transactions    Transaction[]
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  @@map("transaction_transfers")
 }
 
 model Subscription {
