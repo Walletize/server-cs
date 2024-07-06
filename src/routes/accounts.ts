@@ -1,6 +1,6 @@
 import express from 'express';
 import { prisma } from "../app";
-import { FinancialAccount } from '@prisma/client';
+import { FinancialAccount, Prisma } from '@prisma/client';
 
 const router = express.Router();
 
@@ -32,7 +32,7 @@ router.get('/types/:userId', async (req, res) => {
                 },
             }
         })
-        
+
         return res.status(200).json(accountTypes);
     } catch (e) {
         console.error(e);
@@ -101,6 +101,9 @@ router.get('/:accountId', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
     const userId = req.params.userId;
     const countTotalValues = req.query.countTotalValues;
+    const startDate = req.query.startDate;
+
+    const results: { [key: string]: any } = {};
 
     try {
         const rawAccounts = await prisma.$queryRaw`
@@ -162,6 +165,44 @@ router.get('/user/:userId', async (req, res) => {
                 : value
         ));
 
+        results.accounts = accounts;
+
+        if (startDate) {
+            const prevAssetsValue: { prevAssetsValue: number }[] = await prisma.$queryRaw`
+                SELECT SUM(
+                    CASE
+                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                        ELSE t.amount
+                    END
+                ) AS "prevAssetsValue"
+                FROM transactions t
+                INNER JOIN financial_accounts fa ON t.account_id = fa.id
+                INNER JOIN account_categories ac ON fa.category_id = ac.id
+                INNER JOIN account_types at ON ac.type_id = at.id
+                LEFT JOIN currencies c ON t.currency_id = c.id
+                LEFT JOIN currencies fc ON fa.currency_id = fc.id
+                WHERE at.name = 'Asset' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
+            `;
+            const prevLiabilitiesValue: { prevLiabilitiesValue: number }[] = await prisma.$queryRaw`
+                SELECT SUM(
+                    CASE
+                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                        ELSE t.amount
+                    END
+                ) AS "prevLiabilitiesValue"
+                FROM transactions t
+                INNER JOIN financial_accounts fa ON t.account_id = fa.id
+                INNER JOIN account_categories ac ON fa.category_id = ac.id
+                INNER JOIN account_types at ON ac.type_id = at.id
+                LEFT JOIN currencies c ON t.currency_id = c.id
+                LEFT JOIN currencies fc ON fa.currency_id = fc.id
+                WHERE at.name = 'Liability' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
+            `;
+
+            results.prevAssetsValue = prevAssetsValue;
+            results.prevLiabilitiesValue = prevLiabilitiesValue;
+        }
+
         if (countTotalValues) {
             const totalAssets: { totalAssets: number }[] = await prisma.$queryRaw`
             SELECT 
@@ -175,52 +216,63 @@ router.get('/user/:userId', async (req, res) => {
             LEFT JOIN (
                 SELECT 
                     account_id, 
-                    SUM(amount) AS totalAmount
+                SUM(
+                    CASE
+                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                        ELSE t.amount
+                    END
+                ) AS totalAmount
                 FROM 
-                    transactions
+                    transactions t
+                INNER JOIN financial_accounts fa ON t.account_id = fa.id
+                LEFT JOIN currencies c ON t.currency_id = c.id
+                LEFT JOIN currencies fc ON fa.currency_id = fc.id
                 GROUP BY 
                     account_id
             ) t ON fa.id = t.account_id
             WHERE 
                 at.name = 'Asset'
-        `;
+            `;
 
             const totalLiabilities: { totalLiabilities: number }[] = await prisma.$queryRaw`
-            SELECT 
-                SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalLiabilities"
-            FROM 
-                financial_accounts fa
-            JOIN 
-                account_categories ac ON fa.category_id = ac.id
-            JOIN 
-                account_types at ON ac.type_id = at.id
-            LEFT JOIN (
                 SELECT 
-                    account_id, 
-                    SUM(amount) AS totalAmount
+                    SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalLiabilities"
                 FROM 
-                    transactions
-                GROUP BY 
-                    account_id
-            ) t ON fa.id = t.account_id
-            WHERE 
-                at.name = 'Liability'
-        `;
-        
-            const combinedResults = {
-                totalAssets: totalAssets[0].totalAssets ? totalAssets[0].totalAssets : 0,
-                totalLiabilities: totalLiabilities[0].totalLiabilities ? totalLiabilities[0].totalLiabilities : 0,
-                accounts
-            };
+                    financial_accounts fa
+                JOIN 
+                    account_categories ac ON fa.category_id = ac.id
+                JOIN 
+                    account_types at ON ac.type_id = at.id
+                LEFT JOIN (
+                    SELECT 
+                        account_id, 
+                    SUM(
+                        CASE
+                            WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                            ELSE t.amount
+                        END
+                    ) AS totalAmount
+                    FROM 
+                        transactions t
+                    INNER JOIN financial_accounts fa ON t.account_id = fa.id
+                    LEFT JOIN currencies c ON t.currency_id = c.id
+                    LEFT JOIN currencies fc ON fa.currency_id = fc.id
+                    GROUP BY 
+                        account_id
+                ) t ON fa.id = t.account_id
+                WHERE 
+                    at.name = 'Liability'
+            `;
 
-            return res.status(200).json(combinedResults);
-        } else {
-            return res.status(200).json(accounts);
+            results.totalAssets = totalAssets[0].totalAssets ? totalAssets[0].totalAssets : 0;
+            results.totalLiabilities = totalLiabilities[0].totalLiabilities ? totalLiabilities[0].totalLiabilities : 0;
         }
+
+        return res.status(200).json(results);
     } catch (e) {
         console.error(e);
 
-        return res.status(500).json({message: "Internal error"});
+        return res.status(500).json({ message: "Internal error" });
     }
 }
 );
