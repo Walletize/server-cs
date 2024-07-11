@@ -126,7 +126,6 @@ model Transaction {
   date                DateTime
   amount              BigInt
   rate                Float?
-  mainRate            Float?               @map("main_rate")
   accountId           String               @map("account_id")
   categoryId          String?              @map("category_id")
   currencyId          String               @map("currency_id")
