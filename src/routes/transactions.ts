@@ -62,7 +62,7 @@ router.get('/account/:accountId', async (req, res) => {
                         'description', t.description,
                         'amount', t.amount,
                         'convertedAmount', CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
                             ELSE t.amount 
                         END,
                         'date', t.date,
@@ -130,7 +130,12 @@ router.get('/account/:accountId', async (req, res) => {
             ));
 
             const totalIncome: any = await prisma.$queryRaw`
-                SELECT SUM(t.amount) AS "totalIncome"
+                SELECT SUM(
+                    CASE 
+                        WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
+                        ELSE t.amount 
+                    END
+                ) AS "totalIncome"
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
@@ -139,7 +144,12 @@ router.get('/account/:accountId', async (req, res) => {
             `;
 
             const totalExpenses: any = await prisma.$queryRaw`
-                SELECT SUM(t.amount) AS "totalExpenses"
+                SELECT SUM(
+                    CASE 
+                        WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
+                        ELSE t.amount 
+                    END
+                ) AS "totalExpenses"
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
@@ -209,7 +219,7 @@ router.get('/user/:userId', async (req, res) => {
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
                     SUM(
                         CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
                             ELSE t.amount 
                         END
                     ) AS "totalAmount",
@@ -218,7 +228,7 @@ router.get('/user/:userId', async (req, res) => {
                         'description', t.description,
                         'amount', t.amount,
                         'convertedAmount', CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
                             ELSE t.amount 
                         END,
                         'date', t.date,
@@ -297,18 +307,32 @@ router.get('/user/:userId', async (req, res) => {
             ));
 
             const totalIncome: any = await prisma.$queryRaw`
-                SELECT SUM(
+            SELECT SUM(
                     CASE
-                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
-                        ELSE t.amount
+                        WHEN t.currency_id != fa.currency_id THEN
+                            CASE
+                                WHEN fa.currency_id != u.main_currency_id THEN
+                                    t.amount * t.rate / fc.rate * uc.rate
+                                ELSE
+                                    t.amount * t.rate
+                            END
+                        ELSE
+                            CASE
+                                WHEN t.currency_id != u.main_currency_id THEN
+                                    t.amount / c.rate * uc.rate
+                                ELSE
+                                    t.amount
+                            END
                     END
                 ) AS "totalIncome"
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN users u ON fa.user_id = u.id
                 JOIN currencies c ON t.currency_id = c.id
                 JOIN currencies fc ON fa.currency_id = fc.id
+                JOIN currencies uc ON u.main_currency_id = uc.id
                 ${whereClause} AND tt.name = 'Income'
             `;
 
@@ -318,14 +342,14 @@ router.get('/user/:userId', async (req, res) => {
                         WHEN t.currency_id != fa.currency_id THEN
                             CASE
                                 WHEN fa.currency_id != u.main_currency_id THEN
-                                    t.amount / c.rate * uc.rate
+                                    t.amount * t.rate / fc.rate * uc.rate
                                 ELSE
-                                    t.amount / c.rate * fc.rate
+                                    t.amount * t.rate
                             END
                         ELSE
                             CASE
-                                WHEN fa.currency_id != u.main_currency_id THEN
-                                    t.amount / fc.rate * uc.rate
+                                WHEN t.currency_id != u.main_currency_id THEN
+                                    t.amount / c.rate * uc.rate
                                 ELSE
                                     t.amount
                             END

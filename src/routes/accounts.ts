@@ -68,19 +68,30 @@ router.get('/:accountId', async (req, res) => {
                         'updatedAt', at.updated_at
                     )
                 ) AS "accountCategory",
-                fa.initial_value + COALESCE(SUM(t.amount), 0) AS "currentValue"
-            FROM 
-                financial_accounts fa
-            JOIN 
-                account_categories ac ON fa.category_id = ac.id
-            JOIN 
-                account_types at ON ac.type_id = at.id
-            LEFT JOIN 
-                transactions t ON fa.id = t.account_id
-            WHERE 
-                fa.id = ${accountId}
-            GROUP BY 
-                fa.id, ac.id, at.id
+                jsonb_build_object(
+                    'id', c.id,
+                    'code', c.code,
+                    'name', c.name,
+                    'symbol', c.symbol,
+                    'rate', c.rate,
+                    'createdAt', c.created_at,
+                    'updatedAt', c.updated_at
+                ) AS "currency",
+                fa.initial_value + COALESCE(
+                    SUM(
+                        CASE 
+                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            ELSE t.amount 
+                        END
+                    ), 
+                0) AS "currentValue"
+            FROM financial_accounts fa
+            JOIN account_categories ac ON fa.category_id = ac.id
+            JOIN account_types at ON ac.type_id = at.id
+            JOIN currencies c ON fa.currency_id = c.id
+            LEFT JOIN transactions t ON fa.id = t.account_id
+            WHERE fa.id = ${accountId}
+            GROUP BY fa.id, ac.id, at.id, c.id
         `;
 
         const json = JSON.parse(JSON.stringify(account, (_, value) =>
@@ -143,7 +154,7 @@ router.get('/user/:userId', async (req, res) => {
                     fa.initial_value + COALESCE(
                         SUM(
                             CASE 
-                                WHEN t.currency_id != fa.currency_id THEN t.amount / tc.rate * fc.rate
+                                WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
                                 ELSE t.amount 
                             END
                         ), 
