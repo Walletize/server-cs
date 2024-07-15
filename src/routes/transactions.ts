@@ -227,9 +227,27 @@ router.get('/user/:userId', async (req, res) => {
                         'id', t.id,
                         'description', t.description,
                         'amount', t.amount,
-                        'convertedAmount', CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
-                            ELSE t.amount 
+                        'convertedAccountAmount', CASE 
+                            WHEN t.currency_id != fa.currency_id THEN 
+                                t.amount * t.rate
+                            ELSE 
+                                t.amount 
+                        END,
+                        'convertedMainAmount', CASE 
+                            WHEN t.currency_id != fa.currency_id THEN
+                                CASE
+                                    WHEN fa.currency_id != u.main_currency_id THEN
+                                        t.amount * t.rate / fc.rate * uc.rate
+                                    ELSE
+                                        t.amount * t.rate
+                                END
+                            ELSE
+                                CASE
+                                    WHEN t.currency_id != u.main_currency_id THEN
+                                        t.amount / c.rate * uc.rate
+                                    ELSE
+                                        t.amount
+                            END
                         END,
                         'date', t.date,
                         'rate', t.rate,
@@ -295,6 +313,8 @@ router.get('/user/:userId', async (req, res) => {
                 JOIN account_categories ac ON fa.category_id = ac.id
                 JOIN currencies c ON t.currency_id = c.id
                 JOIN currencies fc ON fa.currency_id = fc.id
+                JOIN users u ON fa.user_id = u.id
+                JOIN currencies uc ON u.main_currency_id = uc.id
                 ${whereClause}
                 GROUP BY "transactionDate"
                 ORDER BY "transactionDate" DESC;
