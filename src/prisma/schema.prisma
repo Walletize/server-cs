@@ -36,13 +36,12 @@ model Account {
 }
 
 model Session {
-  id           String   @id @default(uuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("sessions")
 }
@@ -52,6 +51,7 @@ model User {
   name                  String?
   email                 String?               @unique
   emailVerified         DateTime?             @map("email_verified")
+  passwordHash          String?               @map("password_hash")
   image                 String?
   mainCurrencyId        String                @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
   mainCurrency          Currency              @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
