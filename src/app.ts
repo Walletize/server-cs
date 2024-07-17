@@ -1,5 +1,5 @@
 import express from 'express';
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient, User } from "@prisma/client"
 import routes from './routes/routes';
 import cron from 'node-cron';
 import { updateCurrencyRates } from './lib/utils';
@@ -7,34 +7,38 @@ import { PrismaAdapter } from '@lucia-auth/adapter-prisma';
 import { Lucia, Session, verifyRequestOrigin } from 'lucia';
 
 export const prisma = new PrismaClient()
-
 const adapter = new PrismaAdapter(prisma.session, prisma.user);
 export const lucia = new Lucia(adapter, {
     sessionCookie: {
         attributes: {
             secure: process.env.NODE_ENV === "production"
         }
+    },
+    getUserAttributes: (attributes) => {
+        return {
+            email: attributes.email,
+            name: attributes.name,
+            image: attributes.image,
+            mainCurrencyId: attributes.mainCurrencyId
+        };
     }
+
 });
-declare module "lucia" {
-    interface Register {
-        Lucia: typeof lucia;
-    }
-}
 
 const app = express();
-
 app.use(express.json())
 
 app.use((req, res, next) => {
     if (req.method === "GET") {
         return next();
     }
-    const originHeader = req.headers.origin ?? null;
-    const hostHeader = req.headers.host ?? null;
-    if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
+    const originHeader = "http://" + req.headers.origin ?? null;
+    const allowedOrigin = "http://localhost:3101";
+    if (!originHeader || !allowedOrigin || !verifyRequestOrigin(originHeader, [allowedOrigin])) {
         return res.status(403).end();
     }
+
+    return next();
 });
 
 
@@ -57,16 +61,6 @@ app.use(async (req, res, next) => {
     res.locals.session = session;
     return next();
 });
-
-declare global {
-    namespace Express {
-        interface Locals {
-            user: User | null;
-            session: Session | null;
-        }
-    }
-}
-
 
 app.use('/api', routes);
 
