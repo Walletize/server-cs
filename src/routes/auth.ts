@@ -24,9 +24,9 @@ router.post('/signup', async (req, res) => {
     // keep in mind some database (e.g. mysql) are case insensitive
     if (
         typeof email !== "string" ||
-        email.length < 3 ||
-        email.length > 31 ||
-        !/^[a-z0-9_-]+$/.test(email)
+        email.length < 5 || // minimum length for a valid email (e.g., a@b.c)
+        email.length > 254 || // maximum length for a valid email
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     ) {
         return res.status(400).json("Invalid email");
     }
@@ -57,7 +57,6 @@ router.post('/signup', async (req, res) => {
     const sessionCookie = lucia.createSessionCookie(session.id);
 
     return res.status(200).json(sessionCookie);
-}
-);
+});
 
 export default router;
