@@ -19,7 +19,9 @@ export const lucia = new Lucia(adapter, {
             email: attributes.email,
             name: attributes.name,
             image: attributes.image,
-            mainCurrencyId: attributes.mainCurrencyId
+            mainCurrencyId: attributes.mainCurrencyId,
+            providerId: attributes.providerId,
+            providerUserId: attributes.providerUserId
         };
     }
 

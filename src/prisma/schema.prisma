@@ -53,6 +53,8 @@ model User {
   emailVerified         DateTime?             @map("email_verified")
   passwordHash          String?               @map("password_hash")
   image                 String?
+  providerId            String?               @map("provider_id")
+  providerUserId        String?               @unique @map("provider_user_id")
   mainCurrencyId        String                @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
   mainCurrency          Currency              @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
   accounts              Account[]

@@ -3,6 +3,7 @@ import { lucia, prisma } from "../app";
 import { hash } from "@node-rs/argon2";
 import { generateIdFromEntropySize } from "lucia";
 import { verify } from "@node-rs/argon2";
+import { User } from '@prisma/client';
 
 const router = express.Router();
 
@@ -23,7 +24,6 @@ router.post('/signup', async (req, res) => {
         return res.status(400).json("Invalid password");
     }
 
-    const userId = generateIdFromEntropySize(10); // 16 characters long
     const passwordHash = await hash(password, {
         // recommended minimum parameters
         memoryCost: 19456,
@@ -33,16 +33,15 @@ router.post('/signup', async (req, res) => {
     });
 
     // TODO: check if email is already used
-    await prisma.user.create({
+    const newUser = await prisma.user.create({
         data: {
-            id: userId,
             email: email,
             name: name,
             passwordHash: passwordHash
         }
     });
 
-    const session = await lucia.createSession(userId, {});
+    const session = await lucia.createSession(newUser.id, {});
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     res.set("Set-Cookie", sessionCookie);
 
@@ -102,6 +101,41 @@ router.get('/logout', async (req, res) => {
 
     await lucia.invalidateSession(res.locals.session.id);
     const sessionCookie = lucia.createBlankSessionCookie().serialize();
+    res.set("Set-Cookie", sessionCookie);
+
+    return res.status(200).json("Signup succesful");
+});
+
+router.post('/login/:providerId', async (req, res) => {
+    const user: User = req.body;
+    const providerId = req.params.providerId;
+
+    const existingUser = await prisma.user.findUnique({
+        where: {
+            providerId: providerId,
+            providerUserId: user.providerUserId || undefined,
+        },
+    });
+    if (existingUser) {
+        const session = await lucia.createSession(existingUser.id, {});
+        const sessionCookie = lucia.createSessionCookie(session.id).serialize();
+        res.set("Set-Cookie", sessionCookie);
+
+        return res.status(200).json("Login succesful");
+    }
+
+    const newUser = await prisma.user.create({
+        data: {
+            providerId: providerId,
+            providerUserId: user.providerUserId,
+            email: user.email,
+            name: user.name,
+            image: user.image
+        }
+    });
+
+    const session = await lucia.createSession(newUser.id, {});
+    const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     res.set("Set-Cookie", sessionCookie);
 
     return res.status(200).json("Signup succesful");
