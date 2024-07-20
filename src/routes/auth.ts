@@ -4,6 +4,8 @@ import { hash } from "@node-rs/argon2";
 import { generateIdFromEntropySize } from "lucia";
 import { verify } from "@node-rs/argon2";
 import { User } from '@prisma/client';
+import sendMail, { sendVerificationCode } from '../lib/mail';
+import { generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
 
 const router = express.Router();
 
@@ -24,6 +26,16 @@ router.post('/signup', async (req, res) => {
         return res.status(400).json("Invalid password");
     }
 
+
+    const existingUser = await prisma.user.findUnique({
+        where: {
+            email: email,
+        },
+    });
+    if (existingUser) {
+        return res.status(400).json("Email taken");
+    };
+
     const passwordHash = await hash(password, {
         // recommended minimum parameters
         memoryCost: 19456,
@@ -32,14 +44,17 @@ router.post('/signup', async (req, res) => {
         parallelism: 1
     });
 
-    // TODO: check if email is already used
     const newUser = await prisma.user.create({
         data: {
             email: email,
             name: name,
-            passwordHash: passwordHash
+            passwordHash: passwordHash,
+            emailVerified: false
         }
     });
+
+    const verificationCode = await generateEmailVerificationCode(newUser.id, email);
+    sendVerificationCode(email, verificationCode);
 
     const session = await lucia.createSession(newUser.id, {});
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
@@ -107,30 +122,50 @@ router.get('/logout', async (req, res) => {
 });
 
 router.post('/login/:providerId', async (req, res) => {
-    const user: User = req.body;
+    const user = req.body;
     const providerId = req.params.providerId;
 
     const existingUser = await prisma.user.findUnique({
         where: {
-            providerId: providerId,
-            providerUserId: user.providerUserId || undefined,
+            email: user.email,
         },
     });
     if (existingUser) {
+        const existingOAuthAccount = await prisma.oAuthAccount.findFirst({
+            where: {
+                providerId: providerId,
+                providerUserId: user.providerUserId,
+            },
+        });
+        if (!existingOAuthAccount) {
+            await prisma.oAuthAccount.create({
+                data: {
+                    userId: existingUser.id,
+                    providerId: providerId,
+                    providerUserId: user.providerUserId
+                }
+            });
+        };
+
         const session = await lucia.createSession(existingUser.id, {});
         const sessionCookie = lucia.createSessionCookie(session.id).serialize();
         res.set("Set-Cookie", sessionCookie);
 
         return res.status(200).json("Login succesful");
-    }
+    };
 
     const newUser = await prisma.user.create({
         data: {
-            providerId: providerId,
-            providerUserId: user.providerUserId,
             email: user.email,
             name: user.name,
             image: user.image
+        }
+    });
+    await prisma.oAuthAccount.create({
+        data: {
+            userId: newUser.id,
+            providerId: providerId,
+            providerUserId: user.providerUserId
         }
     });
 
@@ -139,6 +174,46 @@ router.post('/login/:providerId', async (req, res) => {
     res.set("Set-Cookie", sessionCookie);
 
     return res.status(200).json("Signup succesful");
+});
+
+router.post('/verify', async (req, res) => {
+    const code = req.body.code;
+    if (typeof code !== "string") {
+        return new Response(null, {
+            status: 400
+        });
+    }
+
+    const user = res.locals.user as User;
+    if (!user) {
+        return new Response(null, {
+            status: 401
+        });
+    }
+    
+
+    const validCode = await verifyVerificationCode(user, code);
+    if (!validCode) {
+        return new Response(null, {
+            status: 400
+        });
+    }
+
+    await lucia.invalidateUserSessions(user.id);
+    await prisma.user.update({
+        where: {
+            id: user.id
+        },
+        data: {
+            emailVerified: true,
+        }
+    });
+
+    const session = await lucia.createSession(user.id, {});
+    const sessionCookie = lucia.createSessionCookie(session.id).serialize();
+    res.set("Set-Cookie", sessionCookie);
+
+    return res.status(200).json("Verify email succesful");
 });
 
 export default router;

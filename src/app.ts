@@ -20,8 +20,7 @@ export const lucia = new Lucia(adapter, {
             name: attributes.name,
             image: attributes.image,
             mainCurrencyId: attributes.mainCurrencyId,
-            providerId: attributes.providerId,
-            providerUserId: attributes.providerUserId
+            emailVerified: attributes.emailVerified,
         };
     }
 

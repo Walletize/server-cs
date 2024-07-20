@@ -13,28 +13,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Account {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
-  type              String
-  provider          String
-  providerAccountId String   @map("provider_account_id")
-  refresh_token     String?  @db.Text
-  access_token      String?  @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?  @db.Text
-  session_state     String?
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
 model Session {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
@@ -47,37 +25,50 @@ model Session {
 }
 
 model User {
-  id                    String                @id @default(uuid())
-  name                  String?
-  email                 String?               @unique
-  emailVerified         DateTime?             @map("email_verified")
-  passwordHash          String?               @map("password_hash")
-  image                 String?
-  providerId            String?               @map("provider_id")
-  providerUserId        String?               @unique @map("provider_user_id")
-  mainCurrencyId        String                @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
-  mainCurrency          Currency              @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
-  accounts              Account[]
-  sessions              Session[]
-  financialAccounts     FinancialAccount[]
-  subscriptions         Subscription[]
-  accountCategories     AccountCategory[]
-  transactionCategories TransactionCategory[]
-  createdAt             DateTime              @default(now()) @map("created_at")
-  updatedAt             DateTime              @updatedAt @map("updated_at")
+  id                     String                  @id @default(uuid())
+  name                   String?
+  email                  String?                 @unique
+  emailVerified          Boolean                 @default(false) @map("email_verified")
+  passwordHash           String?                 @map("password_hash")
+  image                  String?
+  mainCurrencyId         String                  @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
+  mainCurrency           Currency                @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
+  sessions               Session[]
+  oAuthAccounts           OAuthAccount[]
+  financialAccounts      FinancialAccount[]
+  subscriptions          Subscription[]
+  accountCategories      AccountCategory[]
+  transactionCategories  TransactionCategory[]
+  emailVerificationCodes EmailVerificationCode[]
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
 
   @@map("users")
 }
 
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+model OAuthAccount {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  providerId     String   @map("provider_id")
+  providerUserId String   @map("provider_user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([identifier, token])
-  @@map("verification_tokens")
+  @@map("oauth_accounts")
+}
+
+model EmailVerificationCode {
+  id        String   @id @default(uuid())
+  code      String
+  userId    String   @map("user_id")
+  email     String
+  expiresAt DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_codes")
 }
 
 model FinancialAccount {
