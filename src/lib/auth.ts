@@ -15,7 +15,8 @@ export async function generateEmailVerificationCode(userId: string, email: strin
             userId: userId,
             email: email,
             code: code,
-            expiresAt: createDate(new TimeSpan(15, "m"))
+            expiresAt: createDate(new TimeSpan(15, "m")),
+            allowResendAt: createDate(new TimeSpan(1, "m"))
         }
     });
     return code;

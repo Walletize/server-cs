@@ -34,7 +34,7 @@ model User {
   mainCurrencyId         String                  @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
   mainCurrency           Currency                @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
   sessions               Session[]
-  oAuthAccounts           OAuthAccount[]
+  oAuthAccounts          OAuthAccount[]
   financialAccounts      FinancialAccount[]
   subscriptions          Subscription[]
   accountCategories      AccountCategory[]
@@ -59,14 +59,15 @@ model OAuthAccount {
 }
 
 model EmailVerificationCode {
-  id        String   @id @default(uuid())
-  code      String
-  userId    String   @map("user_id")
-  email     String
-  expiresAt DateTime
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  code          String
+  userId        String   @map("user_id")
+  email         String
+  allowResendAt DateTime @map("allow_resend_at")
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  User          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("email_verification_codes")
 }

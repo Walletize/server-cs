@@ -4,8 +4,9 @@ import { hash } from "@node-rs/argon2";
 import { generateIdFromEntropySize } from "lucia";
 import { verify } from "@node-rs/argon2";
 import { User } from '@prisma/client';
-import sendMail, { sendVerificationCode } from '../lib/mail';
+import { sendVerificationCode } from '../lib/mail';
 import { generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
+import { isWithinExpirationDate } from 'oslo';
 
 const router = express.Router();
 
@@ -37,7 +38,6 @@ router.post('/signup', async (req, res) => {
     };
 
     const passwordHash = await hash(password, {
-        // recommended minimum parameters
         memoryCost: 19456,
         timeCost: 2,
         outputLen: 32,
@@ -176,28 +176,21 @@ router.post('/login/:providerId', async (req, res) => {
     return res.status(200).json("Signup succesful");
 });
 
-router.post('/verify', async (req, res) => {
+router.post('/email/verify', async (req, res) => {
     const code = req.body.code;
     if (typeof code !== "string") {
-        return new Response(null, {
-            status: 400
-        });
-    }
+        return res.status(400).json("Verify email failed");
+    };
 
     const user = res.locals.user as User;
     if (!user) {
-        return new Response(null, {
-            status: 401
-        });
-    }
-    
+        return res.status(401).json("Verify email failed");
+    };
 
     const validCode = await verifyVerificationCode(user, code);
     if (!validCode) {
-        return new Response(null, {
-            status: 400
-        });
-    }
+        return res.status(400).json("Verify email failed");
+    };
 
     await lucia.invalidateUserSessions(user.id);
     await prisma.user.update({
@@ -214,6 +207,46 @@ router.post('/verify', async (req, res) => {
     res.set("Set-Cookie", sessionCookie);
 
     return res.status(200).json("Verify email succesful");
+});
+
+router.post('/email/resend', async (req, res) => {
+    const user = res.locals.user as User;
+    if (!user || !user.email) {
+        return res.status(400).json("Resend email failed");
+    };
+
+    const databaseCode = await prisma.emailVerificationCode.findFirst({
+        where: {
+            userId: user.id,
+        }
+    });
+    if (!databaseCode) {
+        return res.status(400).json("Resend email failed");
+    };
+
+    if (isWithinExpirationDate(databaseCode.allowResendAt)) {
+        return res.status(400).json("Resend email failed");
+    };
+
+    const verificationCode = await generateEmailVerificationCode(user.id, user.email);
+    sendVerificationCode(user.email, verificationCode);
+
+    return res.status(200).json("Resend email succesful");
+});
+
+router.get('/email/resend', async (req, res) => {
+    const user = res.locals.user as User;
+
+    const databaseCode = await prisma.emailVerificationCode.findFirst({
+        select: {
+            allowResendAt: true
+        },
+        where: {
+            userId: user.id,
+        }
+    });
+
+    return res.status(200).json(databaseCode);
 });
 
 export default router;
