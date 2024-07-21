@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 import * as aws from "@aws-sdk/client-ses";
+import { render } from "@react-email/components";
+import { Email } from "./mail-component";
 
 const ses = new aws.SES({
     apiVersion: "2010-12-01",
@@ -13,14 +15,18 @@ const ses = new aws.SES({
 const transporter = nodemailer.createTransport({
     SES: { ses, aws },
 });
+const emailHtml = render(Email());
 
 export function sendVerificationCode(email: string, verificationCode: string) {
     transporter.sendMail(
         {
-            from: "noreply@walletize.app",
+            from: {
+                name: 'Walletize',
+                address: 'noreply@walletize.app'
+            },
             to: email,
-            subject: "Testing my Nodemailer/SES setup",
-            text: verificationCode,
+            subject: "Confirm your Walletize account",
+            html: emailHtml,
         },
         // callback
         (error, info) => {
