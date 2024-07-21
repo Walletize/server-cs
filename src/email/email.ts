@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import * as aws from "@aws-sdk/client-ses";
 import { render } from "@react-email/components";
-import { Email } from "./mail-component";
+import { EmailComponent } from "./email-component";
 
 const ses = new aws.SES({
     apiVersion: "2010-12-01",
@@ -15,9 +15,10 @@ const ses = new aws.SES({
 const transporter = nodemailer.createTransport({
     SES: { ses, aws },
 });
-const emailHtml = render(Email());
 
 export function sendVerificationCode(email: string, verificationCode: string) {
+    const emailHtml = render(EmailComponent({ verificationCode: verificationCode }));
+
     transporter.sendMail(
         {
             from: {

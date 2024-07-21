@@ -4,7 +4,7 @@ import { hash } from "@node-rs/argon2";
 import { generateIdFromEntropySize } from "lucia";
 import { verify } from "@node-rs/argon2";
 import { User } from '@prisma/client';
-import { sendVerificationCode } from '../mail/mail';
+import { sendVerificationCode } from '../email/email';
 import { generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
 import { isWithinExpirationDate } from 'oslo';
 
