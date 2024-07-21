@@ -9,7 +9,7 @@ export async function generateEmailVerificationCode(userId: string, email: strin
             userId: userId
         }
     });
-    const code = generateRandomString(8, alphabet("0-9"));
+    const code = generateRandomString(6, alphabet("0-9"));
     await prisma.emailVerificationCode.create({
         data: {
             userId: userId,
