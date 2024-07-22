@@ -14,7 +14,7 @@ import {
 } from "@react-email/components";
 import * as React from "react";
 
-interface EmailComponentProps {
+interface EmailVerificationTemplateProps {
     verificationCode: string;
 }
 
@@ -22,9 +22,9 @@ const baseUrl = process.env.WEB_URL
     ? process.env.WEB_URL
     : "";
 
-export const EmailComponent = ({
+export const EmailVerificationTemplate = ({
     verificationCode
-}: EmailComponentProps) => (
+}: EmailVerificationTemplateProps) => (
     <Html>
         <Head />
         <Preview>Confirm your email address</Preview>

@@ -60,27 +60,30 @@ model OAuthAccount {
 }
 
 model EmailVerificationCode {
-  id            String   @id @default(uuid())
-  code          String
-  userId        String   @map("user_id")
-  email         String
-  allowResendAt DateTime @map("allow_resend_at")
-  expiresAt     DateTime @map("expires_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  User          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  code           String
+  userId         String   @map("user_id")
+  email          String
+  timeoutUntil   DateTime @map("timeout_until")
+  timeoutSeconds Int      @map("timeout_seconds")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("email_verification_codes")
 }
 
 model PasswordResetToken {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  tokenHash String   @map("token_hash")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  tokenHash      String   @map("token_hash")
+  timeoutUntil   DateTime @map("timeout_until")
+  timeoutSeconds Int      @map("timeout_seconds")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
 }

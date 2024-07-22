@@ -55,7 +55,9 @@ router.post('/signup', async (req, res) => {
     });
 
     const verificationCode = await generateEmailVerificationCode(newUser.id, email);
-    sendVerificationCode(email, verificationCode);
+    if (verificationCode) {
+        sendVerificationCode(email, verificationCode);
+    };
 
     const session = await lucia.createSession(newUser.id, {});
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
@@ -225,12 +227,14 @@ router.post('/email/resend', async (req, res) => {
         return res.status(400).json("Resend email failed");
     };
 
-    if (isWithinExpirationDate(databaseCode.allowResendAt)) {
+    if (isWithinExpirationDate(databaseCode.timeoutUntil)) {
         return res.status(400).json("Resend email failed");
     };
 
     const verificationCode = await generateEmailVerificationCode(user.id, user.email);
-    sendVerificationCode(user.email, verificationCode);
+    if (verificationCode) {
+        sendVerificationCode(user.email, verificationCode);
+    };
 
     return res.status(200).json("Resend email succesful");
 });
@@ -240,7 +244,7 @@ router.get('/email/resend', async (req, res) => {
 
     const databaseCode = await prisma.emailVerificationCode.findFirst({
         select: {
-            allowResendAt: true
+            timeoutUntil: true
         },
         where: {
             userId: user.id,
@@ -273,8 +277,9 @@ router.post('/password/reset', async (req, res) => {
 
     const verificationToken = await createPasswordResetToken(existingUser.id);
     const verificationLink = process.env.WEB_URL + "/password/reset/" + verificationToken;
-
-    sendPasswordResetToken(email, existingUser.name || "Walletize User", verificationLink);
+    if (verificationToken) {
+        sendPasswordResetToken(email, existingUser.name || "Walletize User", verificationLink);
+    };
 
     return res.status(200).json("Reset password email sent");
 });

@@ -5,12 +5,29 @@ import { User } from "@prisma/client";
 import { generateIdFromEntropySize } from "lucia";
 import { encodeHex } from "oslo/encoding";
 
-export async function generateEmailVerificationCode(userId: string, email: string): Promise<string> {
-    await prisma.emailVerificationCode.deleteMany({
+export async function generateEmailVerificationCode(userId: string, email: string): Promise<string | null> {
+    const oldCode = await prisma.emailVerificationCode.findFirst({
         where: {
             userId: userId
         }
     });
+
+    let timeoutSeconds = 60;
+    if (oldCode) {
+        if (isWithinExpirationDate(oldCode.timeoutUntil)) {
+            return null;
+        };
+        await prisma.emailVerificationCode.deleteMany({
+            where: {
+                userId: userId
+            }
+        });
+        const hoursDiff = (new Date().getMilliseconds() - oldCode.createdAt.getMilliseconds()) / (1000 * 60 * 60);
+        if (hoursDiff < 24) {
+            timeoutSeconds = oldCode.timeoutSeconds * 2;
+        };
+    };
+   
     const code = generateRandomString(6, alphabet("0-9"));
     await prisma.emailVerificationCode.create({
         data: {
@@ -18,7 +35,8 @@ export async function generateEmailVerificationCode(userId: string, email: strin
             email: email,
             code: code,
             expiresAt: createDate(new TimeSpan(15, "m")),
-            allowResendAt: createDate(new TimeSpan(1, "m"))
+            timeoutUntil: createDate(new TimeSpan(timeoutSeconds, "s")),
+            timeoutSeconds: timeoutSeconds
         }
     });
     return code;
@@ -48,19 +66,38 @@ export async function verifyVerificationCode(user: User, code: string): Promise<
     return true;
 }
 
-export async function createPasswordResetToken(userId: string): Promise<string> {
-    await prisma.passwordResetToken.deleteMany({
+export async function createPasswordResetToken(userId: string): Promise<string | null> {
+    const oldToken = await prisma.passwordResetToken.findFirst({
         where: {
             userId: userId
         }
     });
+    
+    let timeoutSeconds = 60;
+    if (oldToken) {
+        if (isWithinExpirationDate(oldToken.timeoutUntil)) {
+            return null;
+        };
+        await prisma.passwordResetToken.deleteMany({
+            where: {
+                userId: userId
+            }
+        });
+        const hoursDiff = (new Date().getMilliseconds() - oldToken.createdAt.getMilliseconds()) / (1000 * 60 * 60);
+        if (hoursDiff < 24) {
+            timeoutSeconds = oldToken.timeoutSeconds * 2;
+        };
+    };
+
     const tokenId = generateIdFromEntropySize(25);
     const tokenHash = encodeHex(await sha256(new TextEncoder().encode(tokenId)));
     await prisma.passwordResetToken.create({
         data: {
             userId: userId,
             tokenHash: tokenHash,
-            expiresAt: createDate(new TimeSpan(2, "h"))
+            expiresAt: createDate(new TimeSpan(2, "h")),
+            timeoutUntil: createDate(new TimeSpan(timeoutSeconds, "s")),
+            timeoutSeconds: timeoutSeconds
         }
     });
     return tokenId;
