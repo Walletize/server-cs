@@ -1,7 +1,8 @@
 import nodemailer from "nodemailer";
 import * as aws from "@aws-sdk/client-ses";
 import { render } from "@react-email/components";
-import { EmailComponent } from "./email-component";
+import { EmailComponent } from "./email-verification-template";
+import PasswordResetTemplate from "./password-reset-template";
 
 const ses = new aws.SES({
     apiVersion: "2010-12-01",
@@ -27,6 +28,30 @@ export function sendVerificationCode(email: string, verificationCode: string) {
             },
             to: email,
             subject: "Confirm your Walletize account",
+            html: emailHtml,
+        },
+        // callback
+        (error, info) => {
+            if (error) {
+                console.error('Error sending email:', error);
+            } else {
+                console.log('Email sent:', info.messageId);
+            }
+        }
+    );
+};
+
+export function sendPasswordResetToken(email: string, name: string, resetPasswordLink: string) {
+    const emailHtml = render(PasswordResetTemplate({ name: name, resetPasswordLink: resetPasswordLink }));
+
+    transporter.sendMail(
+        {
+            from: {
+                name: 'Walletize',
+                address: 'noreply@walletize.app'
+            },
+            to: email,
+            subject: "Reset your Walletize password",
             html: emailHtml,
         },
         // callback

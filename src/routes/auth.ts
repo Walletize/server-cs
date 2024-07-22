@@ -1,12 +1,13 @@
-import express from 'express';
-import { lucia, prisma } from "../app";
-import { hash } from "@node-rs/argon2";
-import { generateIdFromEntropySize } from "lucia";
-import { verify } from "@node-rs/argon2";
+import { hash, verify } from "@node-rs/argon2";
 import { User } from '@prisma/client';
-import { sendVerificationCode } from '../email/email';
-import { generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
+import express from 'express';
 import { isWithinExpirationDate } from 'oslo';
+import { sha256 } from "oslo/crypto";
+import { encodeHex } from "oslo/encoding";
+import { lucia, prisma } from "../app";
+import { sendPasswordResetToken, sendVerificationCode } from '../email/email';
+import { createPasswordResetToken, generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
+
 
 const router = express.Router();
 
@@ -247,6 +248,84 @@ router.get('/email/resend', async (req, res) => {
     });
 
     return res.status(200).json(databaseCode);
+});
+
+router.post('/password/reset', async (req, res) => {
+    const body = req.body;
+    const email = body.email;
+    if (
+        typeof email !== "string" ||
+        email.length < 5 || // minimum length for a valid email (e.g., a@b.c)
+        email.length > 254 || // maximum length for a valid email
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
+        return res.status(400).json("Invalid email");
+    }
+
+    const existingUser = await prisma.user.findUnique({
+        where: {
+            email: email,
+        },
+    });
+    if (!existingUser) {
+        return res.status(200).json("Reset password email sent");
+    }
+
+    const verificationToken = await createPasswordResetToken(existingUser.id);
+    const verificationLink = process.env.WEB_URL + "/password/reset/" + verificationToken;
+
+    sendPasswordResetToken(email, existingUser.name || "Walletize User", verificationLink);
+
+    return res.status(200).json("Reset password email sent");
+});
+
+router.post('/password/reset/:token', async (req, res) => {
+    const verificationToken = req.params.token;
+    const body = req.body;
+    const password = body.password;
+    if (typeof password !== "string" || password.length < 6 || password.length > 255) {
+        return res.status(400).json("Invalid password");
+    };
+
+    const tokenHash = encodeHex(await sha256(new TextEncoder().encode(verificationToken)));
+    const token = await prisma.passwordResetToken.findFirst({
+        where: {
+            tokenHash: tokenHash,
+        },
+    });
+    if (token) {
+        await prisma.passwordResetToken.deleteMany({
+            where: {
+                tokenHash: tokenHash
+            }
+        });
+    }
+
+    if (!token || !isWithinExpirationDate(token.expiresAt)) {
+        return res.status(400).json("Password reset failed");
+    }
+
+    await lucia.invalidateUserSessions(token.userId);
+    const passwordHash = await hash(password, {
+        memoryCost: 19456,
+        timeCost: 2,
+        outputLen: 32,
+        parallelism: 1
+    });
+    await prisma.user.update({
+        where: {
+            id: token.userId
+        },
+        data: {
+            passwordHash: passwordHash,
+        }
+    });
+
+    const session = await lucia.createSession(token.userId, {});
+    const sessionCookie = lucia.createSessionCookie(session.id).serialize();
+    res.set("Set-Cookie", sessionCookie);
+
+    return res.status(200).json("Password reset succesful");
 });
 
 export default router;

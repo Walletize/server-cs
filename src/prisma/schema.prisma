@@ -40,6 +40,7 @@ model User {
   accountCategories      AccountCategory[]
   transactionCategories  TransactionCategory[]
   emailVerificationCodes EmailVerificationCode[]
+  passwordResetToken     PasswordResetToken[]
   createdAt              DateTime                @default(now()) @map("created_at")
   updatedAt              DateTime                @updatedAt @map("updated_at")
 
@@ -70,6 +71,18 @@ model EmailVerificationCode {
   User          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("email_verification_codes")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model FinancialAccount {
