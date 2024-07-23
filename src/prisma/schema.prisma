@@ -198,6 +198,8 @@ model Plan {
   updatedAt           DateTime              @updatedAt
   subscriptions       Subscription[]
   subscriptionHistory SubscriptionHistory[]
+
+  @@map("plans")
 }
 
 enum BillingCycle {

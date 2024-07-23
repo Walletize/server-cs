@@ -5,6 +5,7 @@ import cron from 'node-cron';
 import { updateCurrencyRates } from './lib/utils';
 import { PrismaAdapter } from '@lucia-auth/adapter-prisma';
 import { Lucia, Session, verifyRequestOrigin } from 'lucia';
+import { Paddle } from '@paddle/paddle-node-sdk';
 
 export const prisma = new PrismaClient()
 const adapter = new PrismaAdapter(prisma.session, prisma.user);
@@ -25,19 +26,20 @@ export const lucia = new Lucia(adapter, {
     }
 
 });
+export const paddle = new Paddle(process.env.PADDLE_API_KEY!);
 
 const app = express();
-app.use(express.json())
 
 app.use((req, res, next) => {
-    if (req.method === "GET") {
+    if (req.method === "GET" || req.path.startsWith('/api/webhooks')) {
         return next();
-    }
+    };
+    
     const originHeader = "http://" + req.headers.origin ?? null;
     const allowedOrigin = "http://localhost:3101";
     if (!originHeader || !allowedOrigin || !verifyRequestOrigin(originHeader, [allowedOrigin])) {
         return res.status(403).end();
-    }
+    };
 
     return next();
 });
@@ -64,6 +66,7 @@ app.use(async (req, res, next) => {
 });
 
 app.use('/api', routes);
+app.use(express.json());
 
 app.listen(process.env.PORT, () => {
     console.log('Server started at ' + process.env.PORT)

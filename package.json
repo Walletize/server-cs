@@ -12,6 +12,7 @@
     "@aws-sdk/client-ses": "^3.616.0",
     "@lucia-auth/adapter-prisma": "^4.0.1",
     "@node-rs/argon2": "^1.8.3",
+    "@paddle/paddle-node-sdk": "^1.4.1",
     "@prisma/client": "^5.15.0",
     "@react-email/components": "^0.0.21",
     "express": "^4.19.2",
