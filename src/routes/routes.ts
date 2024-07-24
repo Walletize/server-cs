@@ -13,6 +13,5 @@ router.use('/accounts', accounts);
 router.use('/transactions', transactions);
 router.use('/currencies', currencies);
 router.use('/users', users);
-router.use('/webhooks', express.raw({ type: 'application/json' }), webhooks);
 
 export default router;

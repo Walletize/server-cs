@@ -6,6 +6,7 @@ import { updateCurrencyRates } from './lib/utils';
 import { PrismaAdapter } from '@lucia-auth/adapter-prisma';
 import { Lucia, Session, verifyRequestOrigin } from 'lucia';
 import { Paddle } from '@paddle/paddle-node-sdk';
+import webhooks from './routes/webhooks';
 
 export const prisma = new PrismaClient()
 const adapter = new PrismaAdapter(prisma.session, prisma.user);
@@ -43,8 +44,6 @@ app.use((req, res, next) => {
 
     return next();
 });
-
-
 app.use(async (req, res, next) => {
     const sessionId = lucia.readSessionCookie(req.headers.cookie ?? "");
     if (!sessionId) {
@@ -64,9 +63,9 @@ app.use(async (req, res, next) => {
     res.locals.session = session;
     return next();
 });
-
-app.use('/api', routes);
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhooks);
 app.use(express.json());
+app.use('/api', routes);
 
 app.listen(process.env.PORT, () => {
     console.log('Server started at ' + process.env.PORT)

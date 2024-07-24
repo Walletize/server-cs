@@ -212,7 +212,6 @@ model Payment {
   subscriptionId      String                @map("subscription_id")
   amount              Float
   paymentDate         DateTime              @map("payment_date")
-  transactionId       String?               @map("transaction_id")
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
   subscription        Subscription          @relation(fields: [subscriptionId], references: [id])
