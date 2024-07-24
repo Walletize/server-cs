@@ -16,41 +16,106 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
             };
 
             const eventType = eventData.eventType;
+            const id = eventData.data.id;
             const userId = eventData.data.customData.userId;
             const planId = eventData.data.customData.planId;
-            const status = eventData.data.status;
 
             if (eventType === "subscription.created") {
                 const startDate = eventData.data.currentBillingPeriod.startsAt;
                 const endDate = eventData.data.currentBillingPeriod.endsAt;
+                const nextBilledAt = eventData.data.nextBilledAt;
+                const status = eventData.data.status;
 
                 await prisma.subscription.create({
                     data: {
+                        id: id,
                         userId: userId,
                         planId: planId,
                         startDate: startDate,
                         endDate: endDate,
-                        status: status
+                        status: status,
+                        nextBilledAt: nextBilledAt
+                    }
+                });
+                await prisma.subscriptionHistory.create({
+                    data: {
+                        subscriptionId: id,
+                        startDate: startDate,
+                        endDate: endDate,
+                        status: status,
+                        nextBilledAt: nextBilledAt
+                    }
+                });
+            } else if (eventType === "subscription.updated") {
+                const startDate = eventData.data.currentBillingPeriod ? eventData.data.currentBillingPeriod.startsAt : null;
+                const endDate = eventData.data.currentBillingPeriod ? eventData.data.currentBillingPeriod.endsAt : null;
+                const nextBilledAt = eventData.data.nextBilledAt;
+                const status = eventData.data.status;
+                
+                await prisma.subscription.update({
+                    where: {
+                        id: eventData.data.id
+                    },
+                    data: {
+                        startDate: startDate,
+                        endDate: endDate,
+                        status: status,
+                        nextBilledAt: nextBilledAt
+                    }
+                });
+                await prisma.subscriptionHistory.create({
+                    data: {
+                        subscriptionId: id,
+                        startDate: startDate,
+                        endDate: endDate,
+                        status: status,
+                        nextBilledAt: nextBilledAt
                     }
                 });
             } else if (eventType === "transaction.completed") {
                 const subscriptionId = eventData.data.subscriptionId;
-                const transactionId = eventData.data.id;
-                const items = eventData.data.items;
-                const paymentDate = eventData.occurredAt;
+                const payments = eventData.data.payments;
 
-                for (const item of items) {
-                    console.log(item)
-                    const amount = item.price.unitPrice.amount;
+                for (const payment of payments) {
+                    const amount = payment.amount;
+                    const paymentDate = payment.capturedAt;
+                    const status = payment.status;
+                    const type = payment.methodDetails.type;
 
-                    await prisma.payment.create({
-                        data: {
-                            subscriptionId: subscriptionId,
-                            amount: amount,
-                            paymentDate: paymentDate,
-                            transactionId: transactionId,
-                        }
-                    });
+                    if (type === "card") {
+                        const cardType = payment.methodDetails.card.type;
+                        const last4 = payment.methodDetails.card.last4;
+                        const expiryYear = payment.methodDetails.card.expiryYear;
+                        const expiryMonth = payment.methodDetails.card.expiryMonth;
+                        const cardholderName = payment.methodDetails.card.cardholderName;
+
+                        await prisma.payment.create({
+                            data: {
+                                transactionId: id,
+                                subscriptionId: subscriptionId,
+                                status: status,
+                                type: type,
+                                amount: amount,
+                                paymentDate: paymentDate,
+                                cardType: cardType,
+                                last4: last4,
+                                expiryYear: expiryYear,
+                                expiryMonth: expiryMonth,
+                                cardholderName: cardholderName,
+                            }
+                        });
+                    } else {
+                        await prisma.payment.create({
+                            data: {
+                                transactionId: id,
+                                subscriptionId: subscriptionId,
+                                status: status,
+                                type: type,
+                                amount: amount,
+                                paymentDate: paymentDate,
+                            }
+                        });
+                    };
                 };
             };
 
@@ -60,9 +125,6 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
         };
     } catch (e) {
         console.error(e);
-        // TODO Delete in production
-        return res.status(200).send();
-
         return res.status(500).send();
     }
 });

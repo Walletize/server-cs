@@ -8,7 +8,6 @@ import { lucia, prisma } from "../app";
 import { sendPasswordResetToken, sendVerificationCode } from '../email/email';
 import { createPasswordResetToken, generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
 
-
 const router = express.Router();
 
 router.post('/signup', async (req, res) => {
@@ -56,7 +55,7 @@ router.post('/signup', async (req, res) => {
 
     const verificationCode = await generateEmailVerificationCode(newUser.id, email);
     if (verificationCode) {
-        sendVerificationCode(email, verificationCode);
+        // sendVerificationCode(email, verificationCode);
     };
 
     const session = await lucia.createSession(newUser.id, {});

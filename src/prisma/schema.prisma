@@ -37,7 +37,6 @@ model User {
   oAuthAccounts          OAuthAccount[]
   financialAccounts      FinancialAccount[]
   subscriptions          Subscription[]
-  subscriptionHistory    SubscriptionHistory[]
   accountCategories      AccountCategory[]
   transactionCategories  TransactionCategory[]
   emailVerificationCodes EmailVerificationCode[]
@@ -174,30 +173,31 @@ model TransactionCategory {
 }
 
 model Subscription {
-  id        String    @id @default(uuid())
-  userId    String    @map("user_id")
-  planId    Int       @map("plan_id")
-  startDate DateTime  @map("start_date")
-  endDate   DateTime  @map("end_date")
-  status    String    @map("status")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  user      User      @relation(fields: [userId], references: [id])
-  plan      Plan      @relation(fields: [planId], references: [id])
-  payments  Payment[]
+  id                  String                @id @default(uuid())
+  userId              String                @map("user_id")
+  planId              Int                   @map("plan_id")
+  startDate           DateTime?             @map("start_date")
+  endDate             DateTime?             @map("end_date")
+  status              String                @map("status")
+  nextBilledAt        DateTime?             @map("next_billed_at")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                Plan                  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  payments            Payment[]
+  subscriptionHistory SubscriptionHistory[]
 
   @@map("subscriptions")
 }
 
 model Plan {
-  id                  Int                   @id @default(autoincrement())
-  name                String
-  price               Float
-  billingCycle        BillingCycle          @map("billing_cycle")
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  subscriptions       Subscription[]
-  subscriptionHistory SubscriptionHistory[]
+  id            Int            @id @default(autoincrement())
+  name          String
+  price         Float
+  billingCycle  BillingCycle   @map("billing_cycle")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
 
   @@map("plans")
 }
@@ -208,30 +208,35 @@ enum BillingCycle {
 }
 
 model Payment {
-  id                  String                @id @default(uuid())
-  subscriptionId      String                @map("subscription_id")
-  amount              Float
-  paymentDate         DateTime              @map("payment_date")
-  createdAt           DateTime              @default(now()) @map("created_at")
-  updatedAt           DateTime              @updatedAt @map("updated_at")
-  subscription        Subscription          @relation(fields: [subscriptionId], references: [id])
-  subscriptionHistory SubscriptionHistory[]
+  id             String       @id @default(uuid())
+  transactionId  String       @map("transaction_id")
+  subscriptionId String       @map("subscription_id")
+  status         String
+  type           String
+  amount         String
+  paymentDate    DateTime?    @map("payment_date")
+  cardType       String?      @map("card_type")
+  last4          String?      @map("last_4")
+  expiryYear     Int?         @map("expiry_year")
+  expiryMonth    Int?         @map("expiry_month")
+  cardholderName String?      @map("cardholder_name")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@map("payments")
 }
 
 model SubscriptionHistory {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  planId    Int      @map("plan_id")
-  paymentId String   @map("payment_id")
-  startDate DateTime @map("start_date")
-  endDate   DateTime @map("end_date")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id])
-  plan      Plan     @relation(fields: [planId], references: [id])
-  payment   Payment  @relation(fields: [paymentId], references: [id])
+  id             String       @id @default(uuid())
+  subscriptionId String       @map("subscription_id")
+  startDate      DateTime?    @map("start_date")
+  endDate        DateTime?    @map("end_date")
+  status         String       @map("status")
+  nextBilledAt   DateTime?    @map("next_billed_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@map("subscription_history")
 }
