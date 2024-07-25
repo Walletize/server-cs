@@ -81,41 +81,17 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
                     const paymentDate = payment.capturedAt;
                     const status = payment.status;
                     const type = payment.methodDetails.type;
-
-                    if (type === "card") {
-                        const cardType = payment.methodDetails.card.type;
-                        const last4 = payment.methodDetails.card.last4;
-                        const expiryYear = payment.methodDetails.card.expiryYear;
-                        const expiryMonth = payment.methodDetails.card.expiryMonth;
-                        const cardholderName = payment.methodDetails.card.cardholderName;
-
-                        await prisma.payment.create({
-                            data: {
-                                transactionId: id,
-                                subscriptionId: subscriptionId,
-                                status: status,
-                                type: type,
-                                amount: amount,
-                                paymentDate: paymentDate,
-                                cardType: cardType,
-                                last4: last4,
-                                expiryYear: expiryYear,
-                                expiryMonth: expiryMonth,
-                                cardholderName: cardholderName,
-                            }
-                        });
-                    } else {
-                        await prisma.payment.create({
-                            data: {
-                                transactionId: id,
-                                subscriptionId: subscriptionId,
-                                status: status,
-                                type: type,
-                                amount: amount,
-                                paymentDate: paymentDate,
-                            }
-                        });
-                    };
+                    
+                    await prisma.payment.create({
+                        data: {
+                            transactionId: id,
+                            subscriptionId: subscriptionId,
+                            status: status,
+                            type: type,
+                            amount: amount,
+                            paymentDate: paymentDate,
+                        }
+                    });
                 };
             };
 
