@@ -14,6 +14,9 @@ dependencies:
   '@node-rs/argon2':
     specifier: ^1.8.3
     version: 1.8.3
+  '@paddle/paddle-node-sdk':
+    specifier: ^1.4.1
+    version: 1.4.1
   '@prisma/client':
     specifier: ^5.15.0
     version: 5.15.0(prisma@5.15.0)
@@ -1101,6 +1104,15 @@ packages:
 
   /@one-ini/wasm@0.1.1:
     resolution: {integrity: sha512-XuySG1E38YScSJoMlqovLru4KTUNSjgVTIjyh7qMX6aNN5HY5Ct5LhRJdxO79JtTzKfzV/bnWpz+zquYrISsvw==}
+    dev: false
+
+  /@paddle/paddle-node-sdk@1.4.1:
+    resolution: {integrity: sha512-e0crjEznXi5Wfvj2YtHCqRj8dgLBoPS/m+qCLYE9QAmAlRdCusx92EsAjJd7u8Nf20WJzEksAfF8MgR9fABW4g==}
+    dependencies:
+      lodash: 4.17.21
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
     dev: false
 
   /@pkgjs/parseargs@0.11.0:
@@ -2708,6 +2720,10 @@ packages:
 
   /leac@0.6.0:
     resolution: {integrity: sha512-y+SqErxb8h7nE/fiEX07jsbuhrpO9lL8eca7/Y1nuWV2moNlXhyd59iDGcRf6moVyDMbmTNzL40SUyrFU/yDpg==}
+    dev: false
+
+  /lodash@4.17.21:
+    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
     dev: false
 
   /loose-envify@1.4.0:

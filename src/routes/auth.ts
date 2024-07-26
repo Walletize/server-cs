@@ -8,7 +8,6 @@ import { lucia, prisma } from "../app";
 import { sendPasswordResetToken, sendVerificationCode } from '../email/email';
 import { createPasswordResetToken, generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
 
-
 const router = express.Router();
 
 router.post('/signup', async (req, res) => {
@@ -56,7 +55,7 @@ router.post('/signup', async (req, res) => {
 
     const verificationCode = await generateEmailVerificationCode(newUser.id, email);
     if (verificationCode) {
-        sendVerificationCode(email, verificationCode);
+        // sendVerificationCode(email, verificationCode);
     };
 
     const session = await lucia.createSession(newUser.id, {});
@@ -109,7 +108,36 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/session/validate', async (req, res) => {
-    return res.status(200).json(res.locals.user);
+    if (res.locals.user) {
+        const localUser = res.locals.user as User;
+        const user = await prisma.user.findUnique({
+            select: {
+                email: true,
+                name: true,
+                image: true,
+                mainCurrencyId: true,
+                emailVerified: true,
+                id: true,
+                subscriptions: {
+                    where: {
+                        status: {
+                            in: ["active", "trialing"]
+                        }
+                    },
+                    include: {
+                        plan: true
+                    }
+                }
+            },
+            where: {
+                id: localUser.id,
+            },
+        });
+
+        return res.status(200).json(user);
+    };
+ 
+    return res.status(200).json(null);
 });
 
 router.get('/logout', async (req, res) => {
