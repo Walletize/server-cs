@@ -55,7 +55,7 @@ router.post('/signup', async (req, res) => {
 
     const verificationCode = await generateEmailVerificationCode(newUser.id, email);
     if (verificationCode) {
-        // sendVerificationCode(email, verificationCode);
+        sendVerificationCode(email, verificationCode);
     };
 
     const session = await lucia.createSession(newUser.id, {});
@@ -189,7 +189,8 @@ router.post('/login/:providerId', async (req, res) => {
         data: {
             email: user.email,
             name: user.name,
-            image: user.image
+            image: user.image,
+            emailVerified: true
         }
     });
     await prisma.oAuthAccount.create({
