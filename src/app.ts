@@ -1,14 +1,67 @@
 import express from 'express';
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient, User } from "@prisma/client"
 import routes from './routes/routes';
 import cron from 'node-cron';
 import { updateCurrencyRates } from './lib/utils';
+import { PrismaAdapter } from '@lucia-auth/adapter-prisma';
+import { Lucia, Session, verifyRequestOrigin } from 'lucia';
 
 export const prisma = new PrismaClient()
+const adapter = new PrismaAdapter(prisma.session, prisma.user);
+export const lucia = new Lucia(adapter, {
+    sessionCookie: {
+        attributes: {
+            secure: process.env.NODE_ENV === "production"
+        }
+    },
+    getUserAttributes: (attributes) => {
+        return {
+            email: attributes.email,
+            name: attributes.name,
+            image: attributes.image,
+            mainCurrencyId: attributes.mainCurrencyId,
+            emailVerified: attributes.emailVerified,
+        };
+    }
+
+});
 
 const app = express();
-
 app.use(express.json())
+
+app.use((req, res, next) => {
+    if (req.method === "GET") {
+        return next();
+    }
+    const originHeader = "http://" + req.headers.origin ?? null;
+    const allowedOrigin = "http://localhost:3101";
+    if (!originHeader || !allowedOrigin || !verifyRequestOrigin(originHeader, [allowedOrigin])) {
+        return res.status(403).end();
+    }
+
+    return next();
+});
+
+
+app.use(async (req, res, next) => {
+    const sessionId = lucia.readSessionCookie(req.headers.cookie ?? "");
+    if (!sessionId) {
+        res.locals.user = null;
+        res.locals.session = null;
+        return next();
+    }
+
+    const { session, user } = await lucia.validateSession(sessionId);
+    if (session && session.fresh) {
+        res.appendHeader("Set-Cookie", lucia.createSessionCookie(session.id).serialize());
+    }
+    if (!session) {
+        res.appendHeader("Set-Cookie", lucia.createBlankSessionCookie().serialize());
+    }
+    res.locals.user = user;
+    res.locals.session = session;
+    return next();
+});
 
 app.use('/api', routes);
 
