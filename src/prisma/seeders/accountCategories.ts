@@ -1,39 +1,156 @@
 import { PrismaClient } from "@prisma/client"
 
-export async function seedAccountCategories(prisma: PrismaClient) {
+export async function seedAccountCategories(prisma: PrismaClient, userId: string) {
     await prisma.accountCategory.create({
         data: {
-            id: "ff23e0bc-9e9a-4c63-a49b-c4a74ced6410",
-            name: "Bank Account",
+            name: "Checking Account",
             icon: "",
             typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
         },
     })
 
     await prisma.accountCategory.create({
         data: {
-            id: "09c66fdd-c535-459e-b8cd-938a29e27f71",
-            name: "Investment",
+            name: "Savings Account",
             icon: "",
             typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
         },
     })
 
     await prisma.accountCategory.create({
         data: {
-            id: "36d773ba-3f9d-4916-9410-251915708ad7",
+            name: "Cash",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Stocks",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Cryptocurrencies",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
             name: "Real Estate",
             icon: "",
             typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
         },
     })
 
     await prisma.accountCategory.create({
         data: {
-            id: "85f7d600-0ee1-4ee7-b57a-ef0f71fa6323",
+            name: "Vehicle",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Retirement Accounts",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Gold",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Insurance",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Collectibles",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Other",
+            icon: "",
+            typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
             name: "Loan",
             icon: "",
             typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Credit Card",
+            icon: "",
+            typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Bills",
+            icon: "",
+            typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Mortgage",
+            icon: "",
+            typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+            userId: userId,
+        },
+    })
+
+    await prisma.accountCategory.create({
+        data: {
+            name: "Other",
+            icon: "",
+            typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
+            userId: userId,
         },
     })
 }
