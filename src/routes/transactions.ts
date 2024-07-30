@@ -20,6 +20,31 @@ router.post('/', async (req, res) => {
 }
 );
 
+router.post('/transfer', async (req, res) => {
+    try {
+        const originAccountId = req.body.originAccountId;
+        const originAccountCurrencyId = req.body.originAccountCurrencyId;
+        const destinationAccountId = req.body.destinationAccountId;
+        const destinationAccountCurrencyId = req.body.destinationAccountCurrencyId;
+
+        await prisma.transaction.create({
+            data: {
+                description: "",
+                date: new Date(),
+                amount: 0,
+                rate: 0,
+                accountId: originAccountId,
+                currencyId: originAccountCurrencyId,
+            }
+        });
+
+        return res.status(200).json();
+    } catch (e) {
+        console.error(e);
+    }
+}
+);
+
 router.get('/types/:userId', async (req, res) => {
     const userId = req.params.userId;
 
