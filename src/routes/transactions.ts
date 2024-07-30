@@ -26,15 +26,32 @@ router.post('/transfer', async (req, res) => {
         const originAccountCurrencyId = req.body.originAccountCurrencyId;
         const destinationAccountId = req.body.destinationAccountId;
         const destinationAccountCurrencyId = req.body.destinationAccountCurrencyId;
+        const date = req.body.date;
+        const amount = req.body.amount;
+        const rate = req.body.rate;
 
-        await prisma.transaction.create({
+        const originTranasaction = await prisma.transaction.create({
             data: {
-                description: "",
-                date: new Date(),
-                amount: 0,
-                rate: 0,
+                date: date,
+                amount: -amount,
+                rate: rate,
                 accountId: originAccountId,
                 currencyId: originAccountCurrencyId,
+            }
+        });
+        const destinationTranasaction = await prisma.transaction.create({
+            data: {
+                date: date,
+                amount: amount,
+                rate: rate,
+                accountId: destinationAccountId,
+                currencyId: destinationAccountCurrencyId,
+            }
+        });
+        await prisma.transactionTransfer.create({
+            data: {
+                originTransactionId: originTranasaction.id,
+                destinationTransactionId: destinationTranasaction.id
             }
         });
 
