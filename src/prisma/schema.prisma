@@ -132,7 +132,7 @@ model AccountCategory {
 
 model Transaction {
   id                              String                @id @default(uuid())
-  description                     String
+  description                     String?
   date                            DateTime
   amount                          BigInt
   rate                            Float?
