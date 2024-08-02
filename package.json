@@ -3,25 +3,35 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev": "nodemon src/app.ts"
+    "dev": "tsx watch src/app.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.616.0",
+    "@lucia-auth/adapter-prisma": "^4.0.1",
     "@node-rs/argon2": "^1.8.3",
+    "@paddle/paddle-node-sdk": "^1.4.1",
     "@prisma/client": "^5.15.0",
+    "@react-email/components": "^0.0.21",
     "express": "^4.19.2",
     "google-auth-library": "^9.10.0",
-    "node-cron": "^3.0.3"
+    "lucia": "^3.2.0",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.14",
+    "oslo": "^1.2.1",
+    "react": "^18.3.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^6.4.15",
     "@types/passport": "^1.0.16",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
+    "@types/react": "^18.3.3",
     "nodemon": "^3.1.2",
     "prisma": "^5.15.0",
     "ts-node": "^10.9.2",
@@ -29,6 +39,7 @@
   },
   "prisma": {
     "schema": "src/prisma/schema.prisma",
-    "seed": "ts-node src/prisma/seeders/seed.ts"
-  }
+    "seed": "tsx src/prisma/seeders/seed.ts"
+  },
+  "type": "module"
 }

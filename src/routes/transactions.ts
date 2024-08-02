@@ -1,6 +1,7 @@
 import express from 'express';
 import { prisma } from "../app";
 import { Prisma } from '@prisma/client';
+import { seedUserTransactionCategories } from '../prisma/seeders/transactionCategory';
 
 const router = express.Router();
 
@@ -10,6 +11,51 @@ router.post('/', async (req, res) => {
 
         await prisma.transaction.create({
             data: transaction
+        });
+
+        return res.status(200).json();
+    } catch (e) {
+        console.error(e);
+    }
+}
+);
+
+router.post('/transfer', async (req, res) => {
+    try {
+        const originAccountId = req.body.originAccountId;
+        const originAccountCurrencyId = req.body.originAccountCurrencyId;
+        const destinationAccountId = req.body.destinationAccountId;
+        const destinationAccountCurrencyId = req.body.destinationAccountCurrencyId;
+        const selectedCurrencyId = req.body.selectedCurrencyId;
+        const date = req.body.date;
+        const amount = req.body.amount;
+        const rate = req.body.rate;
+
+        const originTranasaction = await prisma.transaction.create({
+            data: {
+                date: date,
+                amount: -amount,
+                rate: selectedCurrencyId !== originAccountCurrencyId ? rate : null,
+                accountId: originAccountId,
+                currencyId: selectedCurrencyId,
+                categoryId: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
+            }
+        });
+        const destinationTranasaction = await prisma.transaction.create({
+            data: {
+                date: date,
+                amount: amount,
+                rate: selectedCurrencyId !== destinationAccountCurrencyId ? rate : null,
+                accountId: destinationAccountId,
+                currencyId: selectedCurrencyId,
+                categoryId: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
+            }
+        });
+        await prisma.transactionTransfer.create({
+            data: {
+                originTransactionId: originTranasaction.id,
+                destinationTransactionId: destinationTranasaction.id
+            }
         });
 
         return res.status(200).json();
@@ -474,197 +520,7 @@ router.post('/categories/:userId', async (req, res) => {
 
     try {
         if (Object.keys(category).length === 0) {
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Salary",
-                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Business",
-                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Gifts",
-                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Insurance Payout",
-                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Investments",
-                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Loan",
-                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Other",
-                    typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Bills & Fees",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Entertainment",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Car",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Beauty",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Education",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Family & Personal",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Food & Drink",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Gifts",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Groceries",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Healthcare",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Home",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Shopping",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Sport & Hobbies",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Transport",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Travel",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Work",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
-
-            await prisma.transactionCategory.create({
-                data: {
-                    name: "Other",
-                    typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
-                    userId: userId,
-                },
-            });
+            await seedUserTransactionCategories(prisma, userId);
         } else {
             await prisma.accountCategory.create({
                 data: category

@@ -13,69 +13,79 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Account {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
-  type              String
-  provider          String
-  providerAccountId String   @map("provider_account_id")
-  refresh_token     String?  @db.Text
-  access_token      String?  @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?  @db.Text
-  session_state     String?
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
 model Session {
-  id           String   @id @default(uuid())
-  sessionToken String   @unique @map("session_token")
-  userId       String   @map("user_id")
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("sessions")
 }
 
 model User {
-  id                    String                @id @default(uuid())
-  name                  String?
-  email                 String?               @unique
-  emailVerified         DateTime?             @map("email_verified")
-  image                 String?
-  mainCurrencyId        String                @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
-  mainCurrency          Currency              @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
-  accounts              Account[]
-  sessions              Session[]
-  financialAccounts     FinancialAccount[]
-  subscriptions         Subscription[]
-  accountCategories     AccountCategory[]
-  transactionCategories TransactionCategory[]
-  createdAt             DateTime              @default(now()) @map("created_at")
-  updatedAt             DateTime              @updatedAt @map("updated_at")
+  id                     String                  @id @default(uuid())
+  name                   String?
+  email                  String?                 @unique
+  emailVerified          Boolean                 @default(false) @map("email_verified")
+  passwordHash           String?                 @map("password_hash")
+  image                  String?
+  mainCurrencyId         String                  @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
+  mainCurrency           Currency                @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
+  sessions               Session[]
+  oAuthAccounts          OAuthAccount[]
+  financialAccounts      FinancialAccount[]
+  subscriptions          Subscription[]
+  accountCategories      AccountCategory[]
+  transactionCategories  TransactionCategory[]
+  emailVerificationCodes EmailVerificationCode[]
+  passwordResetToken     PasswordResetToken[]
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
 
   @@map("users")
 }
 
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+model OAuthAccount {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  providerId     String   @map("provider_id")
+  providerUserId String   @map("provider_user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([identifier, token])
-  @@map("verification_tokens")
+  @@map("oauth_accounts")
+}
+
+model EmailVerificationCode {
+  id             String   @id @default(uuid())
+  code           String
+  userId         String   @map("user_id")
+  email          String
+  timeoutUntil   DateTime @map("timeout_until")
+  timeoutSeconds Int      @map("timeout_seconds")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_codes")
+}
+
+model PasswordResetToken {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  tokenHash      String   @map("token_hash")
+  timeoutUntil   DateTime @map("timeout_until")
+  timeoutSeconds Int      @map("timeout_seconds")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model FinancialAccount {
@@ -121,19 +131,21 @@ model AccountCategory {
 }
 
 model Transaction {
-  id                  String               @id @default(uuid())
-  description         String
-  date                DateTime
-  amount              BigInt
-  rate                Float?
-  accountId           String               @map("account_id")
-  categoryId          String?              @map("category_id")
-  currencyId          String               @map("currency_id")
-  financialAccount    FinancialAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  transactionCategory TransactionCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  currency            Currency             @relation(fields: [currencyId], references: [id], onDelete: Cascade)
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
+  id                              String                @id @default(uuid())
+  description                     String?
+  date                            DateTime
+  amount                          BigInt
+  rate                            Float?
+  accountId                       String                @map("account_id")
+  categoryId                      String               @map("category_id")
+  currencyId                      String                @map("currency_id")
+  financialAccount                FinancialAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactionCategory             TransactionCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  currency                        Currency              @relation(fields: [currencyId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime              @default(now()) @map("created_at")
+  updatedAt                       DateTime              @updatedAt @map("updated_at")
+  originTransactionTransfers      TransactionTransfer[] @relation("originTransaction")
+  destinationTransactionTransfers TransactionTransfer[] @relation("destinationTransaction")
 
   @@map("transactions")
 }
@@ -162,26 +174,80 @@ model TransactionCategory {
   @@map("transaction_categories")
 }
 
+model TransactionTransfer {
+  id                       String      @id @default(uuid())
+  originTransactionId      String
+  destinationTransactionId String
+  createdAt                DateTime    @default(now()) @map("created_at")
+  updatedAt                DateTime    @updatedAt @map("updated_at")
+  originTransaction        Transaction @relation("originTransaction", fields: [originTransactionId], references: [id], onDelete: Cascade)
+  destinationTransaction   Transaction @relation("destinationTransaction", fields: [destinationTransactionId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_transfers")
+}
+
 model Subscription {
-  id               String           @id @default(uuid())
-  userId           String           @map("user_id")
-  typeId           String           @map("type_id")
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscriptionType SubscriptionType @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
+  id                  String                @id @default(uuid())
+  userId              String                @map("user_id")
+  planId              Int                   @map("plan_id")
+  startDate           DateTime?             @map("start_date")
+  endDate             DateTime?             @map("end_date")
+  status              String                @map("status")
+  nextBilledAt        DateTime?             @map("next_billed_at")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                Plan                  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  payments            Payment[]
+  subscriptionHistory SubscriptionHistory[]
 
   @@map("subscriptions")
 }
 
-model SubscriptionType {
-  id            String         @id @default(uuid())
+model Plan {
+  id            Int            @id @default(autoincrement())
   name          String
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
+  price         Float
+  billingCycle  BillingCycle   @map("billing_cycle")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   subscriptions Subscription[]
 
-  @@map("subscription_types")
+  @@map("plans")
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model Payment {
+  id             String       @id @default(uuid())
+  transactionId  String       @map("transaction_id")
+  subscriptionId String       @map("subscription_id")
+  status         String
+  type           String
+  amount         String
+  paymentDate    DateTime?    @map("payment_date")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model SubscriptionHistory {
+  id             String       @id @default(uuid())
+  subscriptionId String       @map("subscription_id")
+  startDate      DateTime?    @map("start_date")
+  endDate        DateTime?    @map("end_date")
+  status         String       @map("status")
+  nextBilledAt   DateTime?    @map("next_billed_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("subscription_history")
 }
 
 model Currency {
