@@ -1,6 +1,24 @@
 import { PrismaClient } from "@prisma/client"
 
-export async function seedTransactionCategories(prisma: PrismaClient, userId: string) {
+export async function seedDefaultTransactionCategories(prisma: PrismaClient) {
+    await prisma.transactionCategory.create({
+        data: {
+            id: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
+            name: "Transfer",
+            typeId: "1139551e-7723-49e3-89cd-a73fa6600580"
+        },
+    });
+
+    await prisma.transactionCategory.create({
+        data: {
+            id: "8e46c952-3378-49f6-bcfa-377351882dad",
+            name: "Update",
+            typeId: "d2d456d8-79c4-458e-8ddc-104042c29a9a"
+        },
+    });
+};
+
+export async function seedUserTransactionCategories(prisma: PrismaClient, userId: string) {
     await prisma.transactionCategory.create({
         data: {
             name: "Salary",
@@ -192,4 +210,4 @@ export async function seedTransactionCategories(prisma: PrismaClient, userId: st
             userId: userId,
         },
     });
-}
+};

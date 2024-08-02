@@ -7,7 +7,7 @@ import { encodeHex } from "oslo/encoding";
 import { lucia, prisma } from "../app";
 import { sendPasswordResetToken, sendVerificationCode } from '../email/email';
 import { createPasswordResetToken, generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
-import { seedTransactionCategories } from "../prisma/seeders/transactionCategory";
+import { seedUserTransactionCategories } from "../prisma/seeders/transactionCategory";
 import { seedAccountCategories } from "../prisma/seeders/accountCategories";
 
 const router = express.Router();
@@ -204,7 +204,7 @@ router.post('/login/:providerId', async (req, res) => {
     });
 
     await seedAccountCategories(prisma, newUser.id);
-    await seedTransactionCategories(prisma, newUser.id);
+    await seedUserTransactionCategories(prisma, newUser.id);
 
     const session = await lucia.createSession(newUser.id, {});
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
@@ -240,7 +240,7 @@ router.post('/email/verify', async (req, res) => {
     });
 
     await seedAccountCategories(prisma, user.id);
-    await seedTransactionCategories(prisma, user.id);
+    await seedUserTransactionCategories(prisma, user.id);
 
     const session = await lucia.createSession(user.id, {});
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();

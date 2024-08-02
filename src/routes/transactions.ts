@@ -1,7 +1,7 @@
 import express from 'express';
 import { prisma } from "../app";
 import { Prisma } from '@prisma/client';
-import { seedTransactionCategories } from '../prisma/seeders/transactionCategory';
+import { seedUserTransactionCategories } from '../prisma/seeders/transactionCategory';
 
 const router = express.Router();
 
@@ -26,6 +26,7 @@ router.post('/transfer', async (req, res) => {
         const originAccountCurrencyId = req.body.originAccountCurrencyId;
         const destinationAccountId = req.body.destinationAccountId;
         const destinationAccountCurrencyId = req.body.destinationAccountCurrencyId;
+        const selectedCurrencyId = req.body.selectedCurrencyId;
         const date = req.body.date;
         const amount = req.body.amount;
         const rate = req.body.rate;
@@ -34,18 +35,20 @@ router.post('/transfer', async (req, res) => {
             data: {
                 date: date,
                 amount: -amount,
-                rate: rate,
+                rate: selectedCurrencyId !== originAccountCurrencyId ? rate : null,
                 accountId: originAccountId,
-                currencyId: originAccountCurrencyId,
+                currencyId: selectedCurrencyId,
+                categoryId: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
             }
         });
         const destinationTranasaction = await prisma.transaction.create({
             data: {
                 date: date,
                 amount: amount,
-                rate: rate,
+                rate: selectedCurrencyId !== destinationAccountCurrencyId ? rate : null,
                 accountId: destinationAccountId,
-                currencyId: destinationAccountCurrencyId,
+                currencyId: selectedCurrencyId,
+                categoryId: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
             }
         });
         await prisma.transactionTransfer.create({
@@ -517,7 +520,7 @@ router.post('/categories/:userId', async (req, res) => {
 
     try {
         if (Object.keys(category).length === 0) {
-            await seedTransactionCategories(prisma, userId);
+            await seedUserTransactionCategories(prisma, userId);
         } else {
             await prisma.accountCategory.create({
                 data: category
