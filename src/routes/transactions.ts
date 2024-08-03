@@ -62,8 +62,47 @@ router.post('/transfer', async (req, res) => {
     } catch (e) {
         console.error(e);
     }
-}
-);
+});
+
+router.post('/update', async (req, res) => {
+    try {
+        const description = req.body.description;
+        const date = req.body.date;
+        const newValue = req.body.newValue;
+        const rate = req.body.rate;
+        const currencyId = req.body.currencyId;
+        const accountId = req.body.accountId;
+
+        const result = await prisma.transaction.aggregate({
+            _sum: {
+                amount: true,
+            },
+            where: {
+                accountId: accountId,
+            },
+        });
+        if (!result._sum.amount) {
+            return res.status(500).json();
+        };
+        
+        await prisma.transaction.create({
+            data: {
+                description: description,
+                date: date,
+                amount: newValue - Number(result._sum.amount),
+                rate: rate,
+                accountId: accountId,
+                currencyId: currencyId,
+                categoryId: "8e46c952-3378-49f6-bcfa-377351882dad",
+            }
+        });
+
+        return res.status(200).json();
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json();
+    }
+});
 
 router.get('/types/:userId', async (req, res) => {
     const userId = req.params.userId;
