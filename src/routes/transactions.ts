@@ -554,17 +554,12 @@ router.delete('/:transactionId', async (req, res) => {
 });
 
 router.post('/categories/:userId', async (req, res) => {
-    const userId = req.params.userId;
     const category = req.body;
 
     try {
-        if (Object.keys(category).length === 0) {
-            await seedUserTransactionCategories(prisma, userId);
-        } else {
-            await prisma.accountCategory.create({
-                data: category
-            });
-        }
+        await prisma.transactionCategory.create({
+            data: category
+        });
 
         return res.status(200).json();
     } catch (e) {

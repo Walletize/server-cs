@@ -5,7 +5,9 @@ export async function seedDefaultTransactionCategories(prisma: PrismaClient) {
         data: {
             id: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
             name: "Transfer",
-            typeId: "1139551e-7723-49e3-89cd-a73fa6600580"
+            typeId: "1139551e-7723-49e3-89cd-a73fa6600580",
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -13,7 +15,9 @@ export async function seedDefaultTransactionCategories(prisma: PrismaClient) {
         data: {
             id: "8e46c952-3378-49f6-bcfa-377351882dad",
             name: "Update",
-            typeId: "d2d456d8-79c4-458e-8ddc-104042c29a9a"
+            typeId: "d2d456d8-79c4-458e-8ddc-104042c29a9a",
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 };
@@ -24,6 +28,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Salary",
             typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -32,6 +38,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Business",
             typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -40,6 +48,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Gifts",
             typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -48,6 +58,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Insurance Payout",
             typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -56,6 +68,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Investments",
             typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -64,6 +78,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Loan",
             typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -72,6 +88,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Other",
             typeId: "a6f2747a-8d68-49f7-9aab-3a9dcaaee850",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -80,6 +98,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Bills & Fees",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -88,6 +108,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Entertainment",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -96,6 +118,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Car",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -104,6 +128,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Beauty",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -112,6 +138,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Education",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -120,6 +148,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Family & Personal",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -128,6 +158,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Food & Drink",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -136,6 +168,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Gifts",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -144,6 +178,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Groceries",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -152,6 +188,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Healthcare",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -160,6 +198,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Home",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -168,6 +208,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Shopping",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -176,6 +218,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Sport & Hobbies",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -184,6 +228,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Transport",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -192,6 +238,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Travel",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -200,6 +248,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Work",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 
@@ -208,6 +258,8 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             name: "Other",
             typeId: "62919f5b-047d-45c7-96d9-1cd21a946d3a",
             userId: userId,
+            icon: "gem.svg",
+            color: "#000000",
         },
     });
 };
