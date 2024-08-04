@@ -8,6 +8,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -18,6 +19,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -28,6 +30,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -38,6 +41,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -48,6 +52,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -58,6 +63,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -68,6 +74,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -78,6 +85,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -88,6 +96,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -98,6 +107,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -108,6 +118,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -118,6 +129,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -128,6 +140,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -138,6 +151,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -148,6 +162,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -158,6 +173,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 
@@ -168,6 +184,7 @@ export async function seedAccountCategories(prisma: PrismaClient, userId: string
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     })
 }

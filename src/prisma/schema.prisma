@@ -122,6 +122,7 @@ model AccountCategory {
   userId            String?            @map("user_id")
   icon              String
   color             String
+  iconColor         String             @map("icon_color")
   financialAccounts FinancialAccount[]
   accountType       AccountType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
   user              User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -168,6 +169,7 @@ model TransactionCategory {
   userId          String?         @map("user_id")
   icon            String
   color           String
+  iconColor       String          @map("icon_color")
   transactions    Transaction[]
   transactionType TransactionType @relation(fields: [typeId], references: [id], onDelete: Cascade)
   user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)

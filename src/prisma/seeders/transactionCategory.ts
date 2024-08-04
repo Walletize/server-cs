@@ -8,6 +8,7 @@ export async function seedDefaultTransactionCategories(prisma: PrismaClient) {
             typeId: "1139551e-7723-49e3-89cd-a73fa6600580",
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -18,6 +19,7 @@ export async function seedDefaultTransactionCategories(prisma: PrismaClient) {
             typeId: "d2d456d8-79c4-458e-8ddc-104042c29a9a",
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 };
@@ -30,6 +32,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -40,6 +43,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -50,6 +54,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -60,6 +65,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -70,6 +76,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -80,6 +87,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -90,6 +98,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -100,6 +109,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -110,6 +120,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -120,6 +131,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -130,6 +142,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -140,6 +153,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -150,6 +164,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -160,6 +175,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -170,6 +186,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -180,6 +197,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -190,6 +208,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -200,6 +219,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -210,6 +230,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -220,6 +241,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -230,6 +252,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -240,6 +263,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -250,6 +274,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 
@@ -260,6 +285,7 @@ export async function seedUserTransactionCategories(prisma: PrismaClient, userId
             userId: userId,
             icon: "gem.svg",
             color: "#000000",
+            iconColor: "white",
         },
     });
 };
