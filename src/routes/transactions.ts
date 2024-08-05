@@ -159,6 +159,9 @@ router.get('/account/:accountId', async (req, res) => {
                             'id', tc.id,
                             'name', tc.name,
                             'typeId', tc.type_id,
+                            'icon', tc.icon,
+                            'color', tc.color,
+                            'iconColor', tc.icon_color,
                             'createdAt', tc.created_at,
                             'updatedAt', tc.updated_at,
                             'transactionType', json_build_object(
@@ -344,6 +347,9 @@ router.get('/user/:userId', async (req, res) => {
                             'id', tc.id,
                             'name', tc.name,
                             'typeId', tc.type_id,
+                            'icon', tc.icon,
+                            'color', tc.color,
+                            'iconColor', tc.icon_color,
                             'createdAt', tc.created_at,
                             'updatedAt', tc.updated_at,
                             'transactionType', json_build_object(
@@ -376,7 +382,6 @@ router.get('/user/:userId', async (req, res) => {
                                 'name', ac.name,
                                 'typeId', ac.type_id,
                                 'userId', ac.user_id,
-                                'icon', ac.icon,
                                 'createdAt', ac.created_at,
                                 'updatedAt', ac.updated_at
                             )

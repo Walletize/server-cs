@@ -52,6 +52,9 @@ router.get('/:accountId', async (req, res) => {
                 fa.user_id AS "userId",
                 fa.category_id AS "categoryId",
                 fa.initial_value AS "initialValue",
+                fa.icon AS "icon",
+                fa.color AS "color",
+                fa.icon_color AS "iconColor",
                 fa.created_at AS "createdAt",
                 fa.updated_at AS "updatedAt",
                 jsonb_build_object(
@@ -59,7 +62,6 @@ router.get('/:accountId', async (req, res) => {
                     'name', ac.name,
                     'typeId', ac.type_id,
                     'userId', ac.user_id,
-                    'icon', ac.icon,
                     'createdAt', ac.created_at,
                     'updatedAt', ac.updated_at,
                     'accountType', jsonb_build_object(
@@ -126,6 +128,9 @@ router.get('/user/:userId', async (req, res) => {
                 fa.category_id AS "categoryId",
                 fa.currency_id AS "currencyId",
                 fa.initial_value AS "initialValue",
+                fa.icon AS "icon",
+                fa.color AS "color",
+                fa.icon_color AS "iconColor",
                 fa.created_at AS "createdAt",
                 fa.updated_at AS "updatedAt",
                 jsonb_build_object(
@@ -133,7 +138,6 @@ router.get('/user/:userId', async (req, res) => {
                     'name', ac.name,
                     'typeId', ac.type_id,
                     'userId', ac.user_id,
-                    'icon', ac.icon,
                     'createdAt', ac.created_at,
                     'updatedAt', ac.updated_at,
                     'accountType', jsonb_build_object(
