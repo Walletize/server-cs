@@ -1,6 +1,7 @@
 import express from 'express';
 import { prisma } from "../app";
 import { FinancialAccount, Prisma } from '@prisma/client';
+import { seedAccountCategories } from '../prisma/seeders/accountCategories';
 
 const router = express.Router();
 
@@ -51,6 +52,9 @@ router.get('/:accountId', async (req, res) => {
                 fa.user_id AS "userId",
                 fa.category_id AS "categoryId",
                 fa.initial_value AS "initialValue",
+                fa.icon AS "icon",
+                fa.color AS "color",
+                fa.icon_color AS "iconColor",
                 fa.created_at AS "createdAt",
                 fa.updated_at AS "updatedAt",
                 jsonb_build_object(
@@ -58,7 +62,6 @@ router.get('/:accountId', async (req, res) => {
                     'name', ac.name,
                     'typeId', ac.type_id,
                     'userId', ac.user_id,
-                    'icon', ac.icon,
                     'createdAt', ac.created_at,
                     'updatedAt', ac.updated_at,
                     'accountType', jsonb_build_object(
@@ -125,6 +128,9 @@ router.get('/user/:userId', async (req, res) => {
                 fa.category_id AS "categoryId",
                 fa.currency_id AS "currencyId",
                 fa.initial_value AS "initialValue",
+                fa.icon AS "icon",
+                fa.color AS "color",
+                fa.icon_color AS "iconColor",
                 fa.created_at AS "createdAt",
                 fa.updated_at AS "updatedAt",
                 jsonb_build_object(
@@ -132,7 +138,6 @@ router.get('/user/:userId', async (req, res) => {
                     'name', ac.name,
                     'typeId', ac.type_id,
                     'userId', ac.user_id,
-                    'icon', ac.icon,
                     'createdAt', ac.created_at,
                     'updatedAt', ac.updated_at,
                     'accountType', jsonb_build_object(
@@ -332,158 +337,7 @@ router.post('/categories/:userId', async (req, res) => {
 
     try {
         if (Object.keys(category).length === 0) {
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Checking Account",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Savings Account",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Cash",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Stocks",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Cryptocurrencies",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Real Estate",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Vehicle",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Retirement Accounts",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Gold",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Insurance",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Collectibles",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Other",
-                    icon: "",
-                    typeId: "590cf50e-09a5-414c-9444-a716b14d210f",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Loan",
-                    icon: "",
-                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Credit Card",
-                    icon: "",
-                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Bills",
-                    icon: "",
-                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Mortgage",
-                    icon: "",
-                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
-                    userId: userId,
-                },
-            })
-
-            await prisma.accountCategory.create({
-                data: {
-                    name: "Other",
-                    icon: "",
-                    typeId: "645349f8-6b34-420c-91ef-c058eb065f2d",
-                    userId: userId,
-                },
-            })
+            await seedAccountCategories(prisma, userId);
         } else {
             await prisma.accountCategory.create({
                 data: category

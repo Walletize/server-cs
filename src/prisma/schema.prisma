@@ -95,6 +95,9 @@ model FinancialAccount {
   categoryId      String          @map("category_id")
   currencyId      String          @map("currency_id")
   initialValue    BigInt          @map("initial_value")
+  icon              String
+  color             String
+  iconColor         String             @map("icon_color")
   transactions    Transaction[]
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountCategory AccountCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -120,7 +123,6 @@ model AccountCategory {
   name              String
   typeId            String             @map("type_id")
   userId            String?            @map("user_id")
-  icon              String
   financialAccounts FinancialAccount[]
   accountType       AccountType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
   user              User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -131,19 +133,21 @@ model AccountCategory {
 }
 
 model Transaction {
-  id                  String               @id @default(uuid())
-  description         String
-  date                DateTime
-  amount              BigInt
-  rate                Float?
-  accountId           String               @map("account_id")
-  categoryId          String?              @map("category_id")
-  currencyId          String               @map("currency_id")
-  financialAccount    FinancialAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  transactionCategory TransactionCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  currency            Currency             @relation(fields: [currencyId], references: [id], onDelete: Cascade)
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
+  id                              String                @id @default(uuid())
+  description                     String?
+  date                            DateTime
+  amount                          BigInt
+  rate                            Float?
+  accountId                       String                @map("account_id")
+  categoryId                      String                @map("category_id")
+  currencyId                      String                @map("currency_id")
+  financialAccount                FinancialAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactionCategory             TransactionCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  currency                        Currency              @relation(fields: [currencyId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime              @default(now()) @map("created_at")
+  updatedAt                       DateTime              @updatedAt @map("updated_at")
+  originTransactionTransfers      TransactionTransfer[] @relation("originTransaction")
+  destinationTransactionTransfers TransactionTransfer[] @relation("destinationTransaction")
 
   @@map("transactions")
 }
@@ -163,6 +167,9 @@ model TransactionCategory {
   name            String
   typeId          String          @map("type_id")
   userId          String?         @map("user_id")
+  icon            String
+  color           String
+  iconColor       String          @map("icon_color")
   transactions    Transaction[]
   transactionType TransactionType @relation(fields: [typeId], references: [id], onDelete: Cascade)
   user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -170,6 +177,18 @@ model TransactionCategory {
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
   @@map("transaction_categories")
+}
+
+model TransactionTransfer {
+  id                       String      @id @default(uuid())
+  originTransactionId      String
+  destinationTransactionId String
+  createdAt                DateTime    @default(now()) @map("created_at")
+  updatedAt                DateTime    @updatedAt @map("updated_at")
+  originTransaction        Transaction @relation("originTransaction", fields: [originTransactionId], references: [id], onDelete: Cascade)
+  destinationTransaction   Transaction @relation("destinationTransaction", fields: [destinationTransactionId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_transfers")
 }
 
 model Subscription {
