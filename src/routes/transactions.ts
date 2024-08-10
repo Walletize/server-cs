@@ -178,9 +178,6 @@ router.get('/account/:accountId', async (req, res) => {
                             'categoryId', fa.category_id,
                             'currencyId', fa.currency_id,
                             'initialValue', fa.initial_value,
-                            'icon', tc.icon,
-                            'color', tc.color,
-                            'iconColor', tc.icon_color,
                             'createdAt', fa.created_at,
                             'updatedAt', fa.updated_at,
                             'currency', json_build_object(
@@ -384,9 +381,6 @@ router.get('/user/:userId', async (req, res) => {
                             'categoryId', fa.category_id,
                             'currencyId', fa.currency_id,
                             'initialValue', fa.initial_value,
-                            'icon', tc.icon,
-                            'color', tc.color,
-                            'iconColor', tc.icon_color,
                             'createdAt', fa.created_at,
                             'updatedAt', fa.updated_at,
                             'currency', json_build_object(
@@ -564,7 +558,7 @@ router.get('/user/:userId', async (req, res) => {
             prevExpenses: prevExpenses[0]?.prevExpenses || 0,
             groupedTransactions
         };
-
+        
         return res.status(200).json(combinedResults);
     } catch (e) {
         console.error(e);
