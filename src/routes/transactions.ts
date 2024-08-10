@@ -178,6 +178,9 @@ router.get('/account/:accountId', async (req, res) => {
                             'categoryId', fa.category_id,
                             'currencyId', fa.currency_id,
                             'initialValue', fa.initial_value,
+                            'icon', fa.icon,
+                            'color', fa.color,
+                            'iconColor', fa.icon_color,
                             'createdAt', fa.created_at,
                             'updatedAt', fa.updated_at,
                             'currency', json_build_object(
@@ -381,6 +384,9 @@ router.get('/user/:userId', async (req, res) => {
                             'categoryId', fa.category_id,
                             'currencyId', fa.currency_id,
                             'initialValue', fa.initial_value,
+                            'icon', fa.icon,
+                            'color', fa.color,
+                            'iconColor', fa.icon_color,
                             'createdAt', fa.created_at,
                             'updatedAt', fa.updated_at,
                             'currency', json_build_object(
