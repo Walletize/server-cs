@@ -329,6 +329,20 @@ router.get('/user/:userId', async (req, res) => {
                             ELSE 0
                         END
                     ) AS "totalIncome",
+                    SUM(
+                        CASE 
+                            WHEN at.name = 'Asset' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN at.name = 'Asset' THEN t.amount
+                            ELSE 0
+                        END
+                    ) AS "assetsValue",
+                    SUM(
+                        CASE 
+                            WHEN at.name = 'Liability' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN at.name = 'Liability' THEN t.amount
+                            ELSE 0
+                        END
+                    ) AS "liabilitiesValue",
                     array_agg(json_build_object(
                         'id', t.id,
                         'description', t.description,
@@ -404,7 +418,13 @@ router.get('/user/:userId', async (req, res) => {
                                 'typeId', ac.type_id,
                                 'userId', ac.user_id,
                                 'createdAt', ac.created_at,
-                                'updatedAt', ac.updated_at
+                                'updatedAt', ac.updated_at,
+                                'accountType', jsonb_build_object(
+                                    'id', at.id,
+                                    'name', at.name,
+                                    'createdAt', at.created_at,
+                                    'updatedAt', at.updated_at
+                                )
                             )
                         ),
                         'currency', json_build_object(
@@ -422,6 +442,7 @@ router.get('/user/:userId', async (req, res) => {
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
                 JOIN account_categories ac ON fa.category_id = ac.id
+                JOIN account_types at ON ac.type_id = at.id
                 JOIN currencies c ON t.currency_id = c.id
                 JOIN currencies fc ON fa.currency_id = fc.id
                 JOIN users u ON fa.user_id = u.id
