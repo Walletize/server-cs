@@ -132,25 +132,79 @@ router.get('/account/:accountId', async (req, res) => {
     const endDateStr = req.query.endDate;
 
     try {
-        if (grouped == "daily") {
-            let whereClause = Prisma.sql`WHERE fa.id = ${accountId}`;
+        const previousMonthPeriod = getPreviousMonthPeriod();
+        let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId}`;
+        let prevValuesWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${previousMonthPeriod.startDate}::date AND t.date <= ${previousMonthPeriod.endDate}::date`;
+        if (startDateStr && startDateStr != "" && endDateStr && endDateStr != "") {
+            const previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
+            groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${startDateStr}::date AND t.date <= ${endDateStr}::date`;
+            prevValuesWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${previousPeriod.startDate}::date AND t.date <= ${previousPeriod.endDate}::date`;
+        }
 
-            if (startDateStr && startDateStr != "" && endDateStr && endDateStr != "") {
-                whereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${startDateStr}::date AND t.date <= ${endDateStr}::date`;
-            }
-
-            const rawGroupedTransactions: any = await prisma.$queryRaw`
+        const rawGroupedTransactions: any = await prisma.$queryRaw`
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
-                    SUM(t.amount) AS "totalAmount",
+                 SUM(
+                        CASE 
+                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            ELSE t.amount 
+                        END
+                    ) AS "totalAmount",
+                    SUM(
+                        CASE 
+                            WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN tt.name = 'Expense' THEN t.amount
+                            ELSE 0
+                        END
+                    ) AS "totalExpenses",
+                    SUM(
+                        CASE 
+                            WHEN tt.name = 'Income' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN tt.name = 'Income' THEN t.amount
+                            ELSE 0
+                        END
+                    ) AS "totalIncome",
+                    SUM(
+                        CASE 
+                            WHEN at.name = 'Asset' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN at.name = 'Asset' THEN t.amount
+                            ELSE 0
+                        END
+                    ) AS "assetsValue",
+                    SUM(
+                        CASE 
+                            WHEN at.name = 'Liability' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN at.name = 'Liability' THEN t.amount
+                            ELSE 0
+                        END
+                    ) AS "liabilitiesValue",
                     array_agg(json_build_object(
                         'id', t.id,
                         'description', t.description,
                         'amount', t.amount,
-                        'convertedAmount', CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
-                            ELSE t.amount 
+                        'convertedAccountAmount', CASE 
+                            WHEN t.currency_id != fa.currency_id THEN 
+                                t.amount * t.rate
+                            ELSE 
+                                t.amount 
+                        END,
+                        'convertedMainAmount', CASE 
+                            WHEN t.currency_id != fa.currency_id THEN
+                                CASE
+                                    WHEN fa.currency_id != u.main_currency_id THEN
+                                        t.amount * t.rate / fc.rate * uc.rate
+                                    ELSE
+                                        t.amount * t.rate
+                                END
+                            ELSE
+                                CASE
+                                    WHEN t.currency_id != u.main_currency_id THEN
+                                        t.amount / c.rate * uc.rate
+                                    ELSE
+                                        t.amount
+                            END
                         END,
                         'date', t.date,
+                        'rate', t.rate,
                         'accountId', t.account_id,
                         'currencyId', t.currency_id,
                         'createdAt', t.created_at,
@@ -191,6 +245,20 @@ router.get('/account/:accountId', async (req, res) => {
                                 'rate', fc.rate,
                                 'createdAt', fc.created_at,
                                 'updatedAt', fc.updated_at
+                            ),
+                            'accountCategory', json_build_object(
+                                'id', ac.id,
+                                'name', ac.name,
+                                'typeId', ac.type_id,
+                                'userId', ac.user_id,
+                                'createdAt', ac.created_at,
+                                'updatedAt', ac.updated_at,
+                                'accountType', jsonb_build_object(
+                                    'id', at.id,
+                                    'name', at.name,
+                                    'createdAt', at.created_at,
+                                    'updatedAt', at.updated_at
+                                )
                             )
                         ),
                         'currency', json_build_object(
@@ -207,83 +275,90 @@ router.get('/account/:accountId', async (req, res) => {
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN account_categories ac ON fa.category_id = ac.id
+                JOIN account_types at ON ac.type_id = at.id
                 JOIN currencies c ON t.currency_id = c.id
                 JOIN currencies fc ON fa.currency_id = fc.id
-                ${whereClause}
+                JOIN users u ON fa.user_id = u.id
+                JOIN currencies uc ON u.main_currency_id = uc.id
+                ${groupedTransactionsWhereClause}
                 GROUP BY "transactionDate"
                 ORDER BY "transactionDate" DESC;
              `;
 
-            const groupedTransactions = JSON.parse(JSON.stringify(rawGroupedTransactions, (_, value) =>
-                typeof value === 'bigint'
-                    ? value.toString()
-                    : value
-            ));
+        const groupedTransactions = JSON.parse(JSON.stringify(rawGroupedTransactions, (_, value) =>
+            typeof value === 'bigint'
+                ? value.toString()
+                : value
+        ));
 
-            const totalIncome: any = await prisma.$queryRaw`
+        const prevIncome: any = await prisma.$queryRaw`
                 SELECT SUM(
-                    CASE 
-                        WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
-                        ELSE t.amount 
+                    CASE
+                        WHEN t.currency_id != fa.currency_id THEN
+                            CASE
+                                WHEN fa.currency_id != u.main_currency_id THEN
+                                    t.amount * t.rate / fc.rate * uc.rate
+                                ELSE
+                                    t.amount * t.rate
+                            END
+                        ELSE
+                            CASE
+                                WHEN t.currency_id != u.main_currency_id THEN
+                                    t.amount / c.rate * uc.rate
+                                ELSE
+                                    t.amount
+                            END
                     END
-                ) AS "totalIncome"
+                ) AS "prevIncome"
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
-                ${whereClause} AND tt.name = 'Income'
+                JOIN users u ON fa.user_id = u.id
+                JOIN currencies c ON t.currency_id = c.id
+                JOIN currencies fc ON fa.currency_id = fc.id
+                JOIN currencies uc ON u.main_currency_id = uc.id
+                ${prevValuesWhereClause} AND tt.name = 'Income'
             `;
 
-            const totalExpenses: any = await prisma.$queryRaw`
+        const prevExpenses: any = await prisma.$queryRaw`
                 SELECT SUM(
-                    CASE 
-                        WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
-                        ELSE t.amount 
+                    CASE
+                        WHEN t.currency_id != fa.currency_id THEN
+                            CASE
+                                WHEN fa.currency_id != u.main_currency_id THEN
+                                    t.amount * t.rate / fc.rate * uc.rate
+                                ELSE
+                                    t.amount * t.rate
+                            END
+                        ELSE
+                            CASE
+                                WHEN t.currency_id != u.main_currency_id THEN
+                                    t.amount / c.rate * uc.rate
+                                ELSE
+                                    t.amount
+                            END
                     END
-                ) AS "totalExpenses"
+                ) AS "prevExpenses"
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
                 JOIN financial_accounts fa ON t.account_id = fa.id
-                ${whereClause} AND tt.name = 'Expense'
+                JOIN users u ON fa.user_id = u.id
+                JOIN currencies c ON t.currency_id = c.id
+                JOIN currencies fc ON fa.currency_id = fc.id
+                JOIN currencies uc ON u.main_currency_id = uc.id
+                ${prevValuesWhereClause} AND tt.name = 'Expense'
             `;
 
-            const combinedResults = {
-                totalIncome: totalIncome[0]?.totalIncome || 0,
-                totalExpenses: totalExpenses[0]?.totalExpenses || 0,
-                groupedTransactions
-            };
+        const combinedResults = {
+            prevIncome: prevIncome[0]?.prevIncome || 0,
+            prevExpenses: prevExpenses[0]?.prevExpenses || 0,
+            groupedTransactions
+        };
 
-            return res.status(200).json(combinedResults);
-        } else {
-            const transactions = await prisma.transaction.findMany({
-                where: {
-                    financialAccount: {
-                        id: accountId
-                    }
-                },
-                include: {
-                    financialAccount: true,
-                    transactionCategory: {
-                        include: {
-                            transactionType: true
-                        }
-                    }
-                },
-                orderBy: [
-                    {
-                        date: 'desc',
-                    },
-                ],
-            })
-
-            const json = JSON.parse(JSON.stringify(transactions, (_, value) =>
-                typeof value === 'bigint'
-                    ? value.toString()
-                    : value
-            ));
-            return res.status(200).json(json);
-        }
+        return res.status(200).json(combinedResults);
     } catch (e) {
         console.error(e);
 
