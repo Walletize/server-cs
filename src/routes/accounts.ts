@@ -215,8 +215,8 @@ router.get('/user/:userId', async (req, res) => {
                 WHERE at.name = 'Liability' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
             `;
 
-            results.prevAssetsValue = prevAssetsValue;
-            results.prevLiabilitiesValue = prevLiabilitiesValue;
+            results.prevAssetsValue = prevAssetsValue[0].prevAssetsValue ? prevAssetsValue[0].prevAssetsValue : 0;
+            results.prevLiabilitiesValue = prevLiabilitiesValue[0].prevLiabilitiesValue ? prevLiabilitiesValue[0].prevLiabilitiesValue : 0;
         }
 
         if (countTotalValues) {
