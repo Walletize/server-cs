@@ -49,4 +49,4 @@ EXPOSE 3100
 ENV PORT 3100
 
 # Start the Express server
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/src/app.js"]
