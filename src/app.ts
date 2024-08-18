@@ -66,8 +66,8 @@ app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhooks);
 app.use(express.json());
 app.use('/api', routes);
 
-app.listen(process.env.PORT, () => {
-    console.log('Server started at ' + process.env.PORT)
+app.listen(process.env.PORT || 3100, () => {
+    console.log('Server started at ' + process.env.PORT || 3100);
 });
 
 // updateCurrencyRates();
