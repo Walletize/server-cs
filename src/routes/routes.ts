@@ -1,10 +1,10 @@
 import express from "express";
-import auth from "./auth";
-import accounts from "./accounts";
-import transactions from "./transactions";
-import currencies from "./currencies";
-import users from "./users";
-import subscriptions from "./subscriptions";
+import auth from "./auth.js";
+import accounts from "./accounts.js";
+import transactions from "./transactions.js";
+import currencies from "./currencies.js";
+import users from "./users.js";
+import subscriptions from "./subscriptions.js";
 
 const router = express.Router()
 

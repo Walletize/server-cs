@@ -1,12 +1,12 @@
 import express from 'express';
 import { PrismaClient, User } from "@prisma/client"
-import routes from './routes/routes';
+import routes from './routes/routes.js';
 import cron from 'node-cron';
-import { updateCurrencyRates } from './lib/utils';
+import { updateCurrencyRates } from './lib/utils.js';
 import { PrismaAdapter } from '@lucia-auth/adapter-prisma';
 import { Lucia, Session, verifyRequestOrigin } from 'lucia';
 import { Paddle } from '@paddle/paddle-node-sdk';
-import webhooks from './routes/webhooks';
+import webhooks from './routes/webhooks.js';
 
 export const prisma = new PrismaClient()
 const adapter = new PrismaAdapter(prisma.session, prisma.user);

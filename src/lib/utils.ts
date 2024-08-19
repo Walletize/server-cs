@@ -1,4 +1,4 @@
-import { prisma } from "../app";
+import { prisma } from "../app.js";
 import { ExchangeRateApiResponse } from "../types/ExchangeRateApiRes";
 
 export async function updateCurrencyRates() {

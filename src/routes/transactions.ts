@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import express from 'express';
-import { prisma } from "../app";
-import { getPreviousMonthPeriod, getPreviousPeriod } from '../lib/utils';
+import { prisma } from "../app.js";
+import { getPreviousMonthPeriod, getPreviousPeriod } from '../lib/utils.js';
 
 const router = express.Router();
 

@@ -1,5 +1,5 @@
 import { User } from "@prisma/client";
-import { lucia } from "../app";
+import { lucia } from "../app.js";
 import { Session } from "lucia";
 
 declare module "lucia" {

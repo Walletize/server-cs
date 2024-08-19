@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer";
 import * as aws from "@aws-sdk/client-ses";
 import { render } from "@react-email/components";
-import PasswordResetTemplate from "./password-reset-template";
-import { EmailVerificationTemplate } from "./email-verification-template";
+import PasswordResetTemplate from "./password-reset-template.js";
+import { EmailVerificationTemplate } from "./email-verification-template.js";
 
 const ses = new aws.SES({
     apiVersion: "2010-12-01",

@@ -1,5 +1,5 @@
 import express from 'express';
-import { paddle, prisma } from "../app";
+import { paddle, prisma } from "../app.js";
 
 const router = express.Router();
 

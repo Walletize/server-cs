@@ -1,6 +1,6 @@
 import { TimeSpan, createDate, isWithinExpirationDate } from "oslo";
 import { generateRandomString, alphabet, sha256 } from "oslo/crypto";
-import { prisma } from "../app";
+import { prisma } from "../app.js";
 import { User } from "@prisma/client";
 import { generateIdFromEntropySize } from "lucia";
 import { encodeHex } from "oslo/encoding";

@@ -1,7 +1,7 @@
 import express from 'express';
-import { prisma } from "../app";
+import { prisma } from "../app.js";
 import { FinancialAccount, Prisma } from '@prisma/client';
-import { seedAccountCategories } from '../prisma/seeders/accountCategories';
+import { seedAccountCategories } from '../prisma/seeders/accountCategories.js';
 
 const router = express.Router();
 

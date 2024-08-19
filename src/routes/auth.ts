@@ -4,11 +4,11 @@ import express from 'express';
 import { isWithinExpirationDate } from 'oslo';
 import { sha256 } from "oslo/crypto";
 import { encodeHex } from "oslo/encoding";
-import { lucia, prisma } from "../app";
-import { sendPasswordResetToken, sendVerificationCode } from '../email/email';
-import { createPasswordResetToken, generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth';
-import { seedUserTransactionCategories } from "../prisma/seeders/transactionCategory";
-import { seedAccountCategories } from "../prisma/seeders/accountCategories";
+import { lucia, prisma } from "../app.js";
+import { sendPasswordResetToken, sendVerificationCode } from '../email/email.js';
+import { createPasswordResetToken, generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth.js';
+import { seedUserTransactionCategories } from "../prisma/seeders/transactionCategory.js";
+import { seedAccountCategories } from "../prisma/seeders/accountCategories.js";
 
 const router = express.Router();
 
