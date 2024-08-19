@@ -38,6 +38,7 @@ RUN adduser --system --uid 1001 expressjs
 # Copy built application files
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
 
 # Set the correct permissions
 RUN chown -R expressjs:nodejs /app
@@ -49,4 +50,4 @@ EXPOSE 3100
 ENV PORT 3100
 
 # Start the Express server
-CMD ["node", "dist/src/app.js"]
+CMD ["node", "dist/app.js"]
