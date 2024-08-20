@@ -35,8 +35,8 @@ app.use((req, res, next) => {
     if (req.method === "GET" || req.path.startsWith('/api/webhooks')) {
         return next();
     };
-    const originHeader = "http://" + req.headers.origin;
-    const allowedOrigin = "http://localhost:3101";
+    const originHeader = req.headers.origin;
+    const allowedOrigin = process.env.WEB_URL;
     if (!originHeader || !allowedOrigin || !verifyRequestOrigin(originHeader, [allowedOrigin])) {
         return res.status(403).end();
     };
