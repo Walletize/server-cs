@@ -127,7 +127,6 @@ router.get('/types/:userId', async (req, res) => {
 
 router.get('/account/:accountId', async (req, res) => {
     const accountId = req.params.accountId;
-    const grouped = req.query.grouped;
     const startDateStr = req.query.startDate;
     const endDateStr = req.query.endDate;
 
@@ -143,12 +142,6 @@ router.get('/account/:accountId', async (req, res) => {
 
         const rawGroupedTransactions: any = await prisma.$queryRaw`
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
-                 SUM(
-                        CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
-                            ELSE t.amount 
-                        END
-                    ) AS "totalAmount",
                     SUM(
                         CASE 
                             WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
@@ -353,6 +346,8 @@ router.get('/account/:accountId', async (req, res) => {
             `;
 
         const combinedResults = {
+            prevStartDate: new Date(previousMonthPeriod.startDate),
+            prevEndDate: new Date(previousMonthPeriod.endDate),
             prevIncome: prevIncome[0]?.prevIncome || 0,
             prevExpenses: prevExpenses[0]?.prevExpenses || 0,
             groupedTransactions
@@ -384,12 +379,6 @@ router.get('/user/:userId', async (req, res) => {
 
         const rawGroupedTransactions: any = await prisma.$queryRaw`
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
-                    SUM(
-                        CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
-                            ELSE t.amount 
-                        END
-                    ) AS "totalAmount",
                     SUM(
                         CASE 
                             WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
@@ -594,6 +583,8 @@ router.get('/user/:userId', async (req, res) => {
             `;
 
         const combinedResults = {
+            prevStartDate: new Date(previousMonthPeriod.startDate),
+            prevEndDate: new Date(previousMonthPeriod.endDate),
             prevIncome: prevIncome[0]?.prevIncome || 0,
             prevExpenses: prevExpenses[0]?.prevExpenses || 0,
             groupedTransactions
