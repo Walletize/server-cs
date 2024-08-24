@@ -21,7 +21,7 @@ router.post('/cancel/:subscriptionId', async (req, res) => {
         });
 
         if (cancelRes.ok) {
-            return res.status(200).json({ message: "Cancel subscription succesful" });
+            return res.status(200).json({ message: "Cancel subscription successful" });
         } else {
             return res.status(500).json({ message: "Cancel subscription failed" });
         }
@@ -51,7 +51,7 @@ router.patch('/change/:subscriptionId', async (req, res) => {
         });
 
         if (changeRes.ok) {
-            return res.status(200).json({ message: "Change subscription succesful" });
+            return res.status(200).json({ message: "Change subscription successful" });
         } else {
             return res.status(500).json({ message: "Change subscription failed" });
         }
