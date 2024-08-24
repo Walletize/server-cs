@@ -57,14 +57,14 @@ router.post('/signup', async (req, res) => {
 
     const verificationCode = await generateEmailVerificationCode(newUser.id, email);
     if (verificationCode) {
-        sendVerificationCode(email, verificationCode);
+        sendVerificationCode(email, name, verificationCode);
     };
 
     const session = await lucia.createSession(newUser.id, {});
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     res.set("Set-Cookie", sessionCookie);
 
-    return res.status(200).json("Sign up succesful");
+    return res.status(200).json("Sign up successful");
 });
 
 router.post('/login', async (req, res) => {
@@ -106,7 +106,7 @@ router.post('/login', async (req, res) => {
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     res.set("Set-Cookie", sessionCookie);
 
-    return res.status(200).json("Login succesful");
+    return res.status(200).json("Login successful");
 });
 
 router.get('/session/validate', async (req, res) => {
@@ -151,7 +151,7 @@ router.get('/logout', async (req, res) => {
     const sessionCookie = lucia.createBlankSessionCookie().serialize();
     res.set("Set-Cookie", sessionCookie);
 
-    return res.status(200).json("Signup succesful");
+    return res.status(200).json("Log out successful");
 });
 
 router.post('/login/:providerId', async (req, res) => {
@@ -184,7 +184,7 @@ router.post('/login/:providerId', async (req, res) => {
         const sessionCookie = lucia.createSessionCookie(session.id).serialize();
         res.set("Set-Cookie", sessionCookie);
 
-        return res.status(200).json("Login succesful");
+        return res.status(200).json("Login successful");
     };
 
     const newUser = await prisma.user.create({
@@ -210,7 +210,7 @@ router.post('/login/:providerId', async (req, res) => {
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     res.set("Set-Cookie", sessionCookie);
 
-    return res.status(200).json("Signup succesful");
+    return res.status(200).json("Signup successful");
 });
 
 router.post('/email/verify', async (req, res) => {
@@ -246,7 +246,7 @@ router.post('/email/verify', async (req, res) => {
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     res.set("Set-Cookie", sessionCookie);
 
-    return res.status(200).json("Verify email succesful");
+    return res.status(200).json("Verify email successful");
 });
 
 router.post('/email/resend', async (req, res) => {
@@ -270,10 +270,10 @@ router.post('/email/resend', async (req, res) => {
 
     const verificationCode = await generateEmailVerificationCode(user.id, user.email);
     if (verificationCode) {
-        sendVerificationCode(user.email, verificationCode);
+        sendVerificationCode(user.email, user.name || user.email, verificationCode);
     };
 
-    return res.status(200).json("Resend email succesful");
+    return res.status(200).json("Resend email successful");
 });
 
 router.get('/email/resend', async (req, res) => {
@@ -367,7 +367,7 @@ router.post('/password/reset/:token', async (req, res) => {
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     res.set("Set-Cookie", sessionCookie);
 
-    return res.status(200).json("Password reset succesful");
+    return res.status(200).json("Password reset successful");
 });
 
 export default router;

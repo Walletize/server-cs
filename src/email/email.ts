@@ -17,8 +17,8 @@ const transporter = nodemailer.createTransport({
     SES: { ses, aws },
 });
 
-export function sendVerificationCode(email: string, verificationCode: string) {
-    const emailHtml = render(EmailVerificationTemplate({ verificationCode: verificationCode }));
+export function sendVerificationCode(email: string, name: string, verificationCode: string) {
+    const emailHtml = render(EmailVerificationTemplate({ name: name, verificationCode: verificationCode }));
 
     transporter.sendMail(
         {
