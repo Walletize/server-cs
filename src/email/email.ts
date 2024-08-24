@@ -30,12 +30,10 @@ export function sendVerificationCode(email: string, name: string, verificationCo
             subject: "Confirm your Walletize account",
             html: emailHtml,
         },
-        // callback
-        (error, info) => {
+ 
+        (error) => {
             if (error) {
                 console.error('Error sending email:', error);
-            } else {
-                console.log('Email sent:', info.messageId);
             }
         }
     );
@@ -54,12 +52,10 @@ export function sendPasswordResetToken(email: string, name: string, resetPasswor
             subject: "Reset your Walletize password",
             html: emailHtml,
         },
-        // callback
-        (error, info) => {
+
+        (error) => {
             if (error) {
                 console.error('Error sending email:', error);
-            } else {
-                console.log('Email sent:', info.messageId);
             }
         }
     );
