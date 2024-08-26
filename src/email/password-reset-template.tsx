@@ -1,105 +1,96 @@
+import React from "react";
 import {
     Body,
     Button,
     Container,
     Head,
+    Heading,
+    Hr,
     Html,
     Img,
     Link,
     Preview,
     Section,
-    Text,
+    Tailwind,
+    Text
 } from "@react-email/components";
-import * as React from "react";
 
 interface PasswordResetTemplateProps {
-    name?: string;
-    resetPasswordLink?: string;
+    name: string;
+    resetPasswordLink: string;
 }
-
-const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "";
 
 export const PasswordResetTemplate = ({
     name,
     resetPasswordLink,
 }: PasswordResetTemplateProps) => {
+    const previewText = "Reset your Walletize password";
+
     return (
         <Html>
             <Head />
-            <Preview>Dropbox reset your password</Preview>
-            <Body style={main}>
-                <Container style={container}>
-                    <Img
-                        src={`${baseUrl}/static/dropbox-logo.png`}
-                        width="40"
-                        height="33"
-                        alt="Dropbox"
-                    />
-                    <Section>
-                        <Text style={text}>Hi {name},</Text>
-                        <Text style={text}>
-                            Someone recently requested a password change for your Dropbox
-                            account. If this was you, you can set a new password here:
+            <Preview>{previewText}</Preview>
+            <Tailwind>
+                <Body className="bg-white my-auto mx-auto font-sans px-2">
+                    <Container className="border border-solid border-[#eaeaea] rounded my-[40px] mx-auto p-[20px] max-w-[465px]">
+                        <Section className="mt-[32px]">
+                            <Img
+                                src={`https://www.walletize.app/walletize.svg`}
+                                width="60"
+                                height="60"
+                                alt="Walletize"
+                                className="my-0 mx-auto"
+                            />
+                        </Section>
+                        <Heading className="text-black text-[24px] font-bold text-center p-0 my-[30px] mx-0">
+                            Reset your password
+                        </Heading>
+                        <Text className="text-black text-[14px] leading-[24px]">
+                            Hello {name},
                         </Text>
-                        <Button style={button} href={resetPasswordLink}>
-                            Reset password
-                        </Button>
-                        <Text style={text}>
-                            If you don&apos;t want to change your password or didn&apos;t
-                            request this, just ignore and delete this message.
+                        <Text className="text-black text-[14px] leading-[24px]">
+                            Someone recently requested a password change for your Walletize account. If this was you, you can set a new password here:
                         </Text>
-                        <Text style={text}>
-                            To keep your account secure, please don&apos;t forward this email
-                            to anyone. See our Help Center for{" "}
-                            <Link style={anchor} href="https://dropbox.com">
-                                more security tips.
+                        <Section className="text-center mt-[32px] mb-[32px] text-[24px]">
+                            <Button style={button} href={resetPasswordLink} className="mx-auto">
+                                Reset password
+                            </Button>
+                        </Section>
+                        <Text className="text-black text-[14px] leading-[24px]">
+                            If you didn&apos;t request this email, there&apos;s nothing to worry about, you can safely ignore it.
+                        </Text>
+                        <Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />
+                        <Text className="text-[#666666] text-[12px] leading-[24px] text-center">
+                            <Link href="https://www.walletize.app" style={link}>
+                                Walletize
                             </Link>
+                            : Simplify Your Money
                         </Text>
-                        <Text style={text}>Happy Dropboxing!</Text>
-                    </Section>
-                </Container>
-            </Body>
+                    </Container>
+                </Body>
+            </Tailwind>
         </Html>
     );
 };
 
 export default PasswordResetTemplate;
 
-const main = {
-    backgroundColor: "#f6f9fc",
-    padding: "10px 0",
-};
-
-const container = {
-    backgroundColor: "#ffffff",
-    border: "1px solid #f0f0f0",
-    padding: "45px",
-};
-
-const text = {
-    fontSize: "16px",
-    fontFamily:
-        "'Open Sans', 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif",
-    fontWeight: "300",
-    color: "#404040",
-    lineHeight: "26px",
-};
-
 const button = {
-    backgroundColor: "#007ee6",
-    borderRadius: "4px",
+    backgroundColor: "#45ba7e",
+    borderRadius: "6px",
     color: "#fff",
     fontFamily: "'Open Sans', 'Helvetica Neue', Arial",
-    fontSize: "15px",
+    fontSize: "13px",
+    fontWeight: "500",
     textDecoration: "none",
     textAlign: "center" as const,
     display: "block",
-    width: "210px",
-    padding: "14px 7px",
+    width: "394px",
+    padding: "14px 14px",
 };
 
-const anchor = {
+const link = {
+    color: "#666666",
+    fontSize: "12px",
     textDecoration: "underline",
 };

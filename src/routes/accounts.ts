@@ -187,8 +187,8 @@ router.get('/user/:userId', async (req, res) => {
             const prevAssetsValue: { prevAssetsValue: number }[] = await prisma.$queryRaw`
                 SELECT SUM(
                     CASE
-                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
-                        ELSE t.amount
+                        WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate) + fa.initial_value
+                        ELSE t.amount + fa.initial_value
                     END
                 ) AS "prevAssetsValue"
                 FROM transactions t
@@ -234,8 +234,8 @@ router.get('/user/:userId', async (req, res) => {
                     account_id, 
                 SUM(
                     CASE
-                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
-                        ELSE t.amount
+                        WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate) + fa.initial_value
+                        ELSE t.amount + fa.initial_value
                     END
                 ) AS totalAmount
                 FROM 

@@ -127,28 +127,20 @@ router.get('/types/:userId', async (req, res) => {
 
 router.get('/account/:accountId', async (req, res) => {
     const accountId = req.params.accountId;
-    const grouped = req.query.grouped;
     const startDateStr = req.query.startDate;
     const endDateStr = req.query.endDate;
 
     try {
-        const previousMonthPeriod = getPreviousMonthPeriod();
+        let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId}`;
-        let prevValuesWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${previousMonthPeriod.startDate}::date AND t.date <= ${previousMonthPeriod.endDate}::date`;
         if (startDateStr && startDateStr != "" && endDateStr && endDateStr != "") {
-            const previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
+            previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
             groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${startDateStr}::date AND t.date <= ${endDateStr}::date`;
-            prevValuesWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${previousPeriod.startDate}::date AND t.date <= ${previousPeriod.endDate}::date`;
         }
+        let prevValuesWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${previousPeriod.startDate}::date AND t.date <= ${previousPeriod.endDate}::date`;
 
         const rawGroupedTransactions: any = await prisma.$queryRaw`
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
-                 SUM(
-                        CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
-                            ELSE t.amount 
-                        END
-                    ) AS "totalAmount",
                     SUM(
                         CASE 
                             WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
@@ -353,6 +345,8 @@ router.get('/account/:accountId', async (req, res) => {
             `;
 
         const combinedResults = {
+            prevStartDate: new Date(previousPeriod.startDate),
+            prevEndDate: new Date(previousPeriod.endDate),
             prevIncome: prevIncome[0]?.prevIncome || 0,
             prevExpenses: prevExpenses[0]?.prevExpenses || 0,
             groupedTransactions
@@ -373,23 +367,16 @@ router.get('/user/:userId', async (req, res) => {
     const endDateStr = req.query.endDate;
 
     try {
-        const previousMonthPeriod = getPreviousMonthPeriod();
+        let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.user_id = ${userId}`;
-        let prevValuesWhereClause = Prisma.sql`WHERE fa.user_id = ${userId} AND t.date >= ${previousMonthPeriod.startDate}::date AND t.date <= ${previousMonthPeriod.endDate}::date`;
         if (startDateStr && startDateStr != "" && endDateStr && endDateStr != "") {
-            const previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
+            previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
             groupedTransactionsWhereClause = Prisma.sql`WHERE fa.user_id = ${userId} AND t.date >= ${startDateStr}::date AND t.date <= ${endDateStr}::date`;
-            prevValuesWhereClause = Prisma.sql`WHERE fa.user_id = ${userId} AND t.date >= ${previousPeriod.startDate}::date AND t.date <= ${previousPeriod.endDate}::date`;
         }
+        let prevValuesWhereClause = Prisma.sql`WHERE fa.user_id = ${userId} AND t.date >= ${previousPeriod.startDate}::date AND t.date <= ${previousPeriod.endDate}::date`;
 
         const rawGroupedTransactions: any = await prisma.$queryRaw`
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
-                    SUM(
-                        CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
-                            ELSE t.amount 
-                        END
-                    ) AS "totalAmount",
                     SUM(
                         CASE 
                             WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
@@ -594,6 +581,8 @@ router.get('/user/:userId', async (req, res) => {
             `;
 
         const combinedResults = {
+            prevStartDate: new Date(previousPeriod.startDate),
+            prevEndDate: new Date(previousPeriod.endDate),
             prevIncome: prevIncome[0]?.prevIncome || 0,
             prevExpenses: prevExpenses[0]?.prevExpenses || 0,
             groupedTransactions
