@@ -1,8 +1,7 @@
 import { TimeSpan, createDate, isWithinExpirationDate } from "oslo";
 import { generateRandomString, alphabet, sha256 } from "oslo/crypto";
 import { prisma } from "../app.js";
-import { User } from "@prisma/client";
-import { generateIdFromEntropySize } from "lucia";
+import { generateIdFromEntropySize, User } from "lucia";
 import { encodeHex } from "oslo/encoding";
 
 export async function generateEmailVerificationCode(userId: string, email: string): Promise<string | null> {

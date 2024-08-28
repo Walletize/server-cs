@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import express from 'express';
 import { prisma } from "../app.js";
 import { getPreviousMonthPeriod, getPreviousPeriod } from '../lib/utils.js';
+import { User } from "lucia";
 
 const router = express.Router();
 
@@ -13,9 +14,10 @@ router.post('/', async (req, res) => {
             data: transaction
         });
 
-        return res.status(200).json();
+        return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
+        return res.status(500).json({ message: "Internal error" });
     }
 }
 );
@@ -58,9 +60,10 @@ router.post('/transfer', async (req, res) => {
             }
         });
 
-        return res.status(200).json();
+        return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
+        return res.status(500).json({ message: "Internal error" });
     }
 });
 
@@ -97,17 +100,22 @@ router.post('/update', async (req, res) => {
             }
         });
 
-        return res.status(200).json();
+        return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-        return res.status(500).json();
+        return res.status(500).json({ message: "Internal error" });
     }
 });
 
 router.get('/types/:userId', async (req, res) => {
-    const userId = req.params.userId;
-
     try {
+        const localUser = res.locals.user as User;
+        const userId = req.params.userId;
+
+        if (localUser.id !== userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         const transactionTypes = await prisma.transactionType.findMany({
             include: {
                 transactionCategories: {
@@ -121,16 +129,28 @@ router.get('/types/:userId', async (req, res) => {
         return res.status(200).json(transactionTypes);
     } catch (e) {
         console.error(e);
+        return res.status(500).json({ message: "Internal error" });
     }
 }
 );
 
 router.get('/account/:accountId', async (req, res) => {
-    const accountId = req.params.accountId;
-    const startDateStr = req.query.startDate;
-    const endDateStr = req.query.endDate;
-
     try {
+        const localUser = res.locals.user as User;
+        const accountId = req.params.accountId;
+        const startDateStr = req.query.startDate;
+        const endDateStr = req.query.endDate;
+
+        const account = await prisma.financialAccount.findUnique({
+            where: {
+                id: accountId
+            },
+        });
+
+        if (localUser.id !== account?.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId}`;
         if (startDateStr && startDateStr != "" && endDateStr && endDateStr != "") {
@@ -355,18 +375,22 @@ router.get('/account/:accountId', async (req, res) => {
         return res.status(200).json(combinedResults);
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 }
 );
 
 router.get('/user/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    const startDateStr = req.query.startDate;
-    const endDateStr = req.query.endDate;
-
     try {
+        const localUser = res.locals.user as User;
+        const userId = req.params.userId;
+        const startDateStr = req.query.startDate;
+        const endDateStr = req.query.endDate;
+
+        if (localUser.id !== userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.user_id = ${userId}`;
         if (startDateStr && startDateStr != "" && endDateStr && endDateStr != "") {
@@ -587,7 +611,7 @@ router.get('/user/:userId', async (req, res) => {
             prevExpenses: prevExpenses[0]?.prevExpenses || 0,
             groupedTransactions
         };
-        
+
         return res.status(200).json(combinedResults);
     } catch (e) {
         console.error(e);
@@ -598,10 +622,24 @@ router.get('/user/:userId', async (req, res) => {
 );
 
 router.put('/:transactionId', async (req, res) => {
-    const transactionId = req.params.transactionId;
-    const updatedAccount = req.body;
-
     try {
+        const localUser = res.locals.user as User;
+        const transactionId = req.params.transactionId;
+        const updatedAccount = req.body;
+
+        const transaction = await prisma.transaction.findUnique({
+            include: {
+                financialAccount: true
+            },
+            where: {
+                id: transactionId
+            },
+        });
+
+        if (localUser.id !== transaction?.financialAccount.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         await prisma.transaction.update({
             where: {
                 id: transactionId,
@@ -612,15 +650,28 @@ router.put('/:transactionId', async (req, res) => {
         return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });
 
 router.delete('/:transactionId', async (req, res) => {
-    const transactionId = req.params.transactionId;
-
     try {
+        const localUser = res.locals.user as User;
+        const transactionId = req.params.transactionId;
+
+        const transaction = await prisma.transaction.findUnique({
+            include: {
+                financialAccount: true
+            },
+            where: {
+                id: transactionId
+            },
+        });
+
+        if (localUser.id !== transaction?.financialAccount.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         await prisma.transaction.delete({
             where: {
                 id: transactionId,
@@ -636,26 +687,36 @@ router.delete('/:transactionId', async (req, res) => {
 });
 
 router.post('/categories/:userId', async (req, res) => {
-    const category = req.body;
-
     try {
+        const category = req.body;
+
         await prisma.transactionCategory.create({
             data: category
         });
 
-        return res.status(200).json();
+        return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });
 
 router.put('/categories/:categoryId', async (req, res) => {
-    const categoryId = req.params.categoryId;
-    const updatedCategory = req.body;
-
     try {
+        const localUser = res.locals.user as User;
+        const categoryId = req.params.categoryId;
+        const updatedCategory = req.body;
+
+        const category = await prisma.transactionCategory.findUnique({
+            where: {
+                id: categoryId
+            },
+        });
+
+        if (localUser.id !== category?.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         await prisma.transactionCategory.update({
             where: {
                 id: categoryId,
@@ -666,15 +727,25 @@ router.put('/categories/:categoryId', async (req, res) => {
         return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });
 
 router.delete('/categories/:categoryId', async (req, res) => {
-    const categoryId = req.params.categoryId;
-
     try {
+        const localUser = res.locals.user as User;
+        const categoryId = req.params.categoryId;
+
+        const category = await prisma.transactionCategory.findUnique({
+            where: {
+                id: categoryId
+            },
+        });
+
+        if (localUser.id !== category?.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         await prisma.transactionCategory.delete({
             where: {
                 id: categoryId,
@@ -684,7 +755,6 @@ router.delete('/categories/:categoryId', async (req, res) => {
         return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });

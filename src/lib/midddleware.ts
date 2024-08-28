@@ -9,7 +9,7 @@ export function verifyOrigin(req: Request, res: Response, next: NextFunction) {
   const originHeader = req.headers.origin;
   const allowedOrigin = process.env.WEB_URL;
   if (!originHeader || !allowedOrigin || !verifyRequestOrigin(originHeader, [allowedOrigin])) {
-    return res.status(403).end();
+    return res.status(403).json({ message: "Forbidden" });
   };
 
   return next();
