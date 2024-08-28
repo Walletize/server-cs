@@ -8,7 +8,12 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
     try {
-        const account = req.body;
+        const localUser = res.locals.user as User;
+        const account = req.body as FinancialAccount;
+
+        if (localUser.id !== account.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
 
         await prisma.financialAccount.create({
             data: account,
@@ -384,8 +389,13 @@ router.delete("/:accountId", async (req, res) => {
 
 router.post("/categories/:userId", async (req, res) => {
     try {
+        const localUser = res.locals.user as User;
         const userId = req.params.userId;
         const category = req.body;
+
+        if (localUser.id !== userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
 
         if (Object.keys(category).length === 0) {
             await seedAccountCategories(prisma, userId);
