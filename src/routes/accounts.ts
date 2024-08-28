@@ -1,4 +1,4 @@
-import { FinancialAccount } from "@prisma/client";
+import { AccountCategory, FinancialAccount } from "@prisma/client";
 import express from "express";
 import { User } from "lucia";
 import { prisma } from "../app.js";
@@ -209,8 +209,7 @@ router.get("/user/:userId", async (req, res) => {
         results.accounts = accounts;
 
         if (startDate) {
-            const prevAssetsValue: { prevAssetsValue: number }[] =
-                await prisma.$queryRaw`
+            const prevAssetsValue: { prevAssetsValue: number }[] = await prisma.$queryRaw`
                 SELECT SUM(
                     CASE
                         WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate) + fa.initial_value
@@ -225,8 +224,7 @@ router.get("/user/:userId", async (req, res) => {
                 LEFT JOIN currencies fc ON fa.currency_id = fc.id
                 WHERE at.name = 'Asset' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
             `;
-            const prevLiabilitiesValue: { prevLiabilitiesValue: number }[] =
-                await prisma.$queryRaw`
+            const prevLiabilitiesValue: { prevLiabilitiesValue: number }[] = await prisma.$queryRaw`
                 SELECT SUM(
                     CASE
                         WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
@@ -245,15 +243,13 @@ router.get("/user/:userId", async (req, res) => {
             results.prevAssetsValue = prevAssetsValue[0].prevAssetsValue
                 ? prevAssetsValue[0].prevAssetsValue
                 : 0;
-            results.prevLiabilitiesValue = prevLiabilitiesValue[0]
-                .prevLiabilitiesValue
+            results.prevLiabilitiesValue = prevLiabilitiesValue[0].prevLiabilitiesValue
                 ? prevLiabilitiesValue[0].prevLiabilitiesValue
                 : 0;
         }
 
         if (countTotalValues) {
-            const totalAssets: { totalAssets: number }[] =
-                await prisma.$queryRaw`
+            const totalAssets: { totalAssets: number }[] = await prisma.$queryRaw`
             SELECT 
                 SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalAssets"
             FROM 
@@ -283,8 +279,7 @@ router.get("/user/:userId", async (req, res) => {
                 at.name = 'Asset'
             `;
 
-            const totalLiabilities: { totalLiabilities: number }[] =
-                await prisma.$queryRaw`
+            const totalLiabilities: { totalLiabilities: number }[] = await prisma.$queryRaw`
                 SELECT 
                     SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalLiabilities"
                 FROM 
@@ -314,9 +309,7 @@ router.get("/user/:userId", async (req, res) => {
                     at.name = 'Liability'
             `;
 
-            results.totalAssets = totalAssets[0].totalAssets
-                ? totalAssets[0].totalAssets
-                : 0;
+            results.totalAssets = totalAssets[0].totalAssets ? totalAssets[0].totalAssets : 0;
             results.totalLiabilities = totalLiabilities[0].totalLiabilities
                 ? totalLiabilities[0].totalLiabilities
                 : 0;
@@ -387,23 +380,18 @@ router.delete("/:accountId", async (req, res) => {
     }
 });
 
-router.post("/categories/:userId", async (req, res) => {
+router.post("/categories", async (req, res) => {
     try {
         const localUser = res.locals.user as User;
-        const userId = req.params.userId;
-        const category = req.body;
+        const category = req.body as AccountCategory;
 
-        if (localUser.id !== userId) {
+        if (localUser.id !== category.userId) {
             return res.status(403).json({ message: "Forbidden" });
         }
 
-        if (Object.keys(category).length === 0) {
-            await seedAccountCategories(prisma, userId);
-        } else {
-            await prisma.accountCategory.create({
-                data: category,
-            });
-        }
+        await prisma.accountCategory.create({
+            data: category,
+        });
 
         return res.status(200).json({ message: "Success" });
     } catch (e) {
