@@ -1,50 +1,67 @@
-import express from 'express';
+import { FinancialAccount } from "@prisma/client";
+import express from "express";
+import { User } from "lucia";
 import { prisma } from "../app.js";
-import { FinancialAccount, Prisma } from '@prisma/client';
-import { seedAccountCategories } from '../prisma/seeders/accountCategories.js';
+import { seedAccountCategories } from "../prisma/seeders/accountCategories.js";
 
 const router = express.Router();
 
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
     try {
         const account = req.body;
 
         await prisma.financialAccount.create({
-            data: account
+            data: account,
         });
 
-        return res.status(200).json();
+        return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
+        return res.status(500).json({ message: "Internal error" });
     }
-}
-);
+});
 
-router.get('/types/:userId', async (req, res) => {
-    const userId = req.params.userId;
-
+router.get("/types/:userId", async (req, res) => {
     try {
+        const localUser = res.locals.user as User;
+        const userId = req.params.userId;
+
+        if (localUser.id !== userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         const accountTypes = await prisma.accountType.findMany({
             include: {
                 accountCategories: {
                     where: {
-                        userId: userId
-                    }
+                        userId: userId,
+                    },
                 },
-            }
-        })
+            },
+        });
 
         return res.status(200).json(accountTypes);
     } catch (e) {
         console.error(e);
+        return res.status(500).json({ message: "Internal error" });
     }
-}
-);
+});
 
-router.get('/:accountId', async (req, res) => {
-    const accountId = req.params.accountId;
-
+router.get("/:accountId", async (req, res) => {
     try {
+        const localUser = res.locals.user as User;
+        const accountId = req.params.accountId;
+
+        const checkAccount = await prisma.financialAccount.findUnique({
+            where: {
+                id: accountId,
+            },
+        });
+
+        if (localUser.id !== checkAccount?.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         const account: FinancialAccount[] = await prisma.$queryRaw`
             SELECT 
                 fa.id AS "id",
@@ -97,29 +114,32 @@ router.get('/:accountId', async (req, res) => {
             GROUP BY fa.id, ac.id, at.id, c.id
         `;
 
-        const json = JSON.parse(JSON.stringify(account, (_, value) =>
-            typeof value === 'bigint'
-                ? value.toString()
-                : value
-        ));
+        const json = JSON.parse(
+            JSON.stringify(account, (_, value) =>
+                typeof value === "bigint" ? value.toString() : value
+            )
+        );
 
         return res.status(200).json(json[0]);
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
-}
-);
+});
 
-router.get('/user/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    const countTotalValues = req.query.countTotalValues;
-    const startDate = req.query.startDate;
-
-    const results: { [key: string]: any } = {};
-
+router.get("/user/:userId", async (req, res) => {
     try {
+        const localUser = res.locals.user as User;
+        const userId = req.params.userId;
+        const countTotalValues = req.query.countTotalValues;
+        const startDate = req.query.startDate;
+
+        if (localUser.id !== localUser.id) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        const results: { [key: string]: any } = {};
+
         const rawAccounts = await prisma.$queryRaw`
             SELECT 
                 fa.id AS "id",
@@ -175,16 +195,17 @@ router.get('/user/:userId', async (req, res) => {
             GROUP BY fa.id, ac.id, at.id, fc.id
         `;
 
-        const accounts = JSON.parse(JSON.stringify(rawAccounts, (_, value) =>
-            typeof value === 'bigint'
-                ? value.toString()
-                : value
-        ));
+        const accounts = JSON.parse(
+            JSON.stringify(rawAccounts, (_, value) =>
+                typeof value === "bigint" ? value.toString() : value
+            )
+        );
 
         results.accounts = accounts;
 
         if (startDate) {
-            const prevAssetsValue: { prevAssetsValue: number }[] = await prisma.$queryRaw`
+            const prevAssetsValue: { prevAssetsValue: number }[] =
+                await prisma.$queryRaw`
                 SELECT SUM(
                     CASE
                         WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate) + fa.initial_value
@@ -199,7 +220,8 @@ router.get('/user/:userId', async (req, res) => {
                 LEFT JOIN currencies fc ON fa.currency_id = fc.id
                 WHERE at.name = 'Asset' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
             `;
-            const prevLiabilitiesValue: { prevLiabilitiesValue: number }[] = await prisma.$queryRaw`
+            const prevLiabilitiesValue: { prevLiabilitiesValue: number }[] =
+                await prisma.$queryRaw`
                 SELECT SUM(
                     CASE
                         WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
@@ -215,12 +237,18 @@ router.get('/user/:userId', async (req, res) => {
                 WHERE at.name = 'Liability' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
             `;
 
-            results.prevAssetsValue = prevAssetsValue[0].prevAssetsValue ? prevAssetsValue[0].prevAssetsValue : 0;
-            results.prevLiabilitiesValue = prevLiabilitiesValue[0].prevLiabilitiesValue ? prevLiabilitiesValue[0].prevLiabilitiesValue : 0;
+            results.prevAssetsValue = prevAssetsValue[0].prevAssetsValue
+                ? prevAssetsValue[0].prevAssetsValue
+                : 0;
+            results.prevLiabilitiesValue = prevLiabilitiesValue[0]
+                .prevLiabilitiesValue
+                ? prevLiabilitiesValue[0].prevLiabilitiesValue
+                : 0;
         }
 
         if (countTotalValues) {
-            const totalAssets: { totalAssets: number }[] = await prisma.$queryRaw`
+            const totalAssets: { totalAssets: number }[] =
+                await prisma.$queryRaw`
             SELECT 
                 SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalAssets"
             FROM 
@@ -250,7 +278,8 @@ router.get('/user/:userId', async (req, res) => {
                 at.name = 'Asset'
             `;
 
-            const totalLiabilities: { totalLiabilities: number }[] = await prisma.$queryRaw`
+            const totalLiabilities: { totalLiabilities: number }[] =
+                await prisma.$queryRaw`
                 SELECT 
                     SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalLiabilities"
                 FROM 
@@ -280,102 +309,144 @@ router.get('/user/:userId', async (req, res) => {
                     at.name = 'Liability'
             `;
 
-            results.totalAssets = totalAssets[0].totalAssets ? totalAssets[0].totalAssets : 0;
-            results.totalLiabilities = totalLiabilities[0].totalLiabilities ? totalLiabilities[0].totalLiabilities : 0;
+            results.totalAssets = totalAssets[0].totalAssets
+                ? totalAssets[0].totalAssets
+                : 0;
+            results.totalLiabilities = totalLiabilities[0].totalLiabilities
+                ? totalLiabilities[0].totalLiabilities
+                : 0;
         }
 
         return res.status(200).json(results);
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
-}
-);
+});
 
-router.put('/:accountId', async (req, res) => {
-    const accountId = req.params.accountId;
-    const updatedAccount = req.body;
-
+router.put("/:accountId", async (req, res) => {
     try {
+        const localUser = res.locals.user as User;
+        const accountId = req.params.accountId;
+        const updatedAccount = req.body;
+
+        const account = await prisma.financialAccount.findUnique({
+            where: {
+                id: accountId,
+            },
+        });
+
+        if (localUser.id !== account?.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         await prisma.financialAccount.update({
             where: {
                 id: accountId,
             },
-            data: updatedAccount
+            data: updatedAccount,
         });
 
         return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });
 
-router.delete('/:accountId', async (req, res) => {
-    const accountId = req.params.accountId;
-
+router.delete("/:accountId", async (req, res) => {
     try {
+        const localUser = res.locals.user as User;
+        const accountId = req.params.accountId;
+
+        const account = await prisma.financialAccount.findUnique({
+            where: {
+                id: accountId,
+            },
+        });
+
+        if (localUser.id !== account?.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         await prisma.financialAccount.delete({
             where: {
                 id: accountId,
             },
-        })
-
-        return res.status(200).json({ message: "Success" });
-    } catch (e) {
-        console.error(e);
-
-        return res.status(500).json({ message: "Internal error" });
-    }
-});
-
-router.post('/categories/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    const category = req.body;
-
-    try {
-        if (Object.keys(category).length === 0) {
-            await seedAccountCategories(prisma, userId);
-        } else {
-            await prisma.accountCategory.create({
-                data: category
-            });
-        }
-
-        return res.status(200).json();
-    } catch (e) {
-        console.error(e);
-
-        return res.status(500).json({ message: "Internal error" });
-    }
-});
-
-router.put('/categories/:categoryId', async (req, res) => {
-    const categoryId = req.params.categoryId;
-    const updatedCategory = req.body;
-
-    try {
-        await prisma.accountCategory.update({
-            where: {
-                id: categoryId,
-            },
-            data: updatedCategory
         });
 
         return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });
 
-router.delete('/categories/:categoryId', async (req, res) => {
-    const categoryId = req.params.categoryId;
-
+router.post("/categories/:userId", async (req, res) => {
     try {
+        const userId = req.params.userId;
+        const category = req.body;
+
+        if (Object.keys(category).length === 0) {
+            await seedAccountCategories(prisma, userId);
+        } else {
+            await prisma.accountCategory.create({
+                data: category,
+            });
+        }
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+router.put("/categories/:categoryId", async (req, res) => {
+    try {
+        const localUser = res.locals.user as User;
+        const categoryId = req.params.categoryId;
+        const updatedCategory = req.body;
+
+        const category = await prisma.accountCategory.findUnique({
+            where: {
+                id: categoryId,
+            },
+        });
+
+        if (localUser.id !== category?.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        await prisma.accountCategory.update({
+            where: {
+                id: categoryId,
+            },
+            data: updatedCategory,
+        });
+
+        return res.status(200).json({ message: "Success" });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "Internal error" });
+    }
+});
+
+router.delete("/categories/:categoryId", async (req, res) => {
+    try {
+        const localUser = res.locals.user as User;
+        const categoryId = req.params.categoryId;
+
+        const category = await prisma.accountCategory.findUnique({
+            where: {
+                id: categoryId,
+            },
+        });
+
+        if (localUser.id !== category?.userId) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         await prisma.accountCategory.delete({
             where: {
                 id: categoryId,
@@ -385,10 +456,8 @@ router.delete('/categories/:categoryId', async (req, res) => {
         return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });
-
 
 export default router;
