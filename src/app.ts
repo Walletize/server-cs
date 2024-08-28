@@ -7,6 +7,7 @@ import { PrismaAdapter } from '@lucia-auth/adapter-prisma';
 import { Lucia, Session, verifyRequestOrigin } from 'lucia';
 import { Paddle } from '@paddle/paddle-node-sdk';
 import webhooks from './routes/webhooks.js';
+import { verifyOrigin, verifySession } from './lib/midddleware.js';
 
 export const prisma = new PrismaClient()
 const adapter = new PrismaAdapter(prisma.session, prisma.user);
@@ -30,38 +31,8 @@ export const lucia = new Lucia(adapter, {
 export const paddle = new Paddle(process.env.PADDLE_API_KEY!);
 
 const app = express();
-
-app.use((req, res, next) => {
-    if (req.method === "GET" || req.path.startsWith('/api/webhooks')) {
-        return next();
-    };
-    const originHeader = req.headers.origin;
-    const allowedOrigin = process.env.WEB_URL;
-    if (!originHeader || !allowedOrigin || !verifyRequestOrigin(originHeader, [allowedOrigin])) {
-        return res.status(403).end();
-    };
-
-    return next();
-});
-app.use(async (req, res, next) => {
-    const sessionId = lucia.readSessionCookie(req.headers.cookie ?? "");
-    if (!sessionId) {
-        res.locals.user = null;
-        res.locals.session = null;
-        return next();
-    }
-
-    const { session, user } = await lucia.validateSession(sessionId);
-    if (session && session.fresh) {
-        res.appendHeader("Set-Cookie", lucia.createSessionCookie(session.id).serialize());
-    }
-    if (!session) {
-        res.appendHeader("Set-Cookie", lucia.createBlankSessionCookie().serialize());
-    }
-    res.locals.user = user;
-    res.locals.session = session;
-    return next();
-});
+app.use(verifyOrigin);
+app.use(verifySession);
 app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhooks);
 app.use(express.json());
 app.use('/api', routes);
