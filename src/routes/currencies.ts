@@ -16,7 +16,6 @@ router.get('/', async (req, res) => {
         return res.status(200).json(currencies);
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });
