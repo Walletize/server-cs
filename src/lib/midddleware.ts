@@ -3,7 +3,7 @@ import { verifyRequestOrigin } from 'lucia';
 import { lucia } from '../app';
 
 export function verifyOrigin(req: Request, res: Response, next: NextFunction) {
-  if (req.method === "GET" || req.path.startsWith('/api/webhooks')) {
+  if (req.method === "GET" || req.path.startsWith('/webhooks')) {
     return next();
   };
   const originHeader = req.headers.origin;

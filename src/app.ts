@@ -33,9 +33,9 @@ export const paddle = new Paddle(process.env.PADDLE_API_KEY!);
 const app = express();
 app.use(verifyOrigin);
 app.use(verifySession);
-app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhooks);
+app.use('/webhooks', express.raw({ type: 'application/json' }), webhooks);
 app.use(express.json());
-app.use('/api', routes);
+app.use('/', routes);
 
 app.listen(process.env.PORT || 3100, () => {
     console.log('Server started at ' + (process.env.PORT || 3100));
