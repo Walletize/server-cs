@@ -21,23 +21,4 @@ router.get('/', async (req, res) => {
     }
 });
 
-
-router.get('/:currencyId', async (req, res) => {
-    const currencyId = req.params.currencyId;
-
-    try {
-        const currency = await prisma.currency.findUnique({
-            where: {
-                id: currencyId
-            }
-        });
-
-        return res.status(200).json(currency);
-    } catch (e) {
-        console.error(e);
-
-        return res.status(500).json({ message: "Internal error" });
-    }
-});
-
 export default router;
