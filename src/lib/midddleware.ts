@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyRequestOrigin } from 'lucia';
-import { lucia } from '../app';
+import { lucia } from "../app.js";
 
 export function verifyOrigin(req: Request, res: Response, next: NextFunction) {
   if (req.method === "GET" || req.path.startsWith('/webhooks')) {

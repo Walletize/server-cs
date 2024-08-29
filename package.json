@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev": "tsx watch src/app.ts"
+    "dev": "tsx watch src/app.ts",
+    "build": "npx tsc",
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",
