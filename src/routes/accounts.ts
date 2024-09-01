@@ -15,6 +15,23 @@ router.post("/", async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
+        const accounts = await prisma.financialAccount.findMany({
+            where: {
+                userId: account.userId,
+            },
+        });
+        const activeSubscriptions = await prisma.subscription.findMany({
+            where: {
+                userId: account.userId,
+                status: {
+                    in: ["active", "trialing"],
+                },
+            },
+        });
+        if (accounts.length >= 3 && activeSubscriptions.length === 0) {
+            return res.status(403).json({ message: "Limit reached" });
+        }
+
         await prisma.financialAccount.create({
             data: account,
         });
@@ -120,9 +137,7 @@ router.get("/:accountId", async (req, res) => {
         `;
 
         const json = JSON.parse(
-            JSON.stringify(account, (_, value) =>
-                typeof value === "bigint" ? value.toString() : value
-            )
+            JSON.stringify(account, (_, value) => (typeof value === "bigint" ? value.toString() : value))
         );
 
         return res.status(200).json(json[0]);
@@ -201,9 +216,7 @@ router.get("/user/:userId", async (req, res) => {
         `;
 
         const accounts = JSON.parse(
-            JSON.stringify(rawAccounts, (_, value) =>
-                typeof value === "bigint" ? value.toString() : value
-            )
+            JSON.stringify(rawAccounts, (_, value) => (typeof value === "bigint" ? value.toString() : value))
         );
 
         results.accounts = accounts;
@@ -240,9 +253,7 @@ router.get("/user/:userId", async (req, res) => {
                 WHERE at.name = 'Liability' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
             `;
 
-            results.prevAssetsValue = prevAssetsValue[0].prevAssetsValue
-                ? prevAssetsValue[0].prevAssetsValue
-                : 0;
+            results.prevAssetsValue = prevAssetsValue[0].prevAssetsValue ? prevAssetsValue[0].prevAssetsValue : 0;
             results.prevLiabilitiesValue = prevLiabilitiesValue[0].prevLiabilitiesValue
                 ? prevLiabilitiesValue[0].prevLiabilitiesValue
                 : 0;
@@ -310,9 +321,7 @@ router.get("/user/:userId", async (req, res) => {
             `;
 
             results.totalAssets = totalAssets[0].totalAssets ? totalAssets[0].totalAssets : 0;
-            results.totalLiabilities = totalLiabilities[0].totalLiabilities
-                ? totalLiabilities[0].totalLiabilities
-                : 0;
+            results.totalLiabilities = totalLiabilities[0].totalLiabilities ? totalLiabilities[0].totalLiabilities : 0;
         }
 
         return res.status(200).json(results);
