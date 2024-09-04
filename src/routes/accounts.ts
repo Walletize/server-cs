@@ -80,6 +80,9 @@ router.get("/:accountId", async (req, res) => {
             },
         });
 
+        if (!checkAccount) {
+            return res.status(404).json({ message: "Not found" });
+        }
         if (localUser.id !== checkAccount?.userId) {
             return res.status(403).json({ message: "Forbidden" });
         }
