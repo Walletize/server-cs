@@ -1,0 +1,2 @@
+export const ASSET_TYPE_ID = "590cf50e-09a5-414c-9444-a716b14d210f";
+export const LIABILITY_TYPE_ID = "645349f8-6b34-420c-91ef-c058eb065f2d";

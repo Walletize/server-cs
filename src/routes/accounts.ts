@@ -2,7 +2,7 @@ import { AccountCategory, FinancialAccount } from "@prisma/client";
 import express from "express";
 import { User } from "lucia";
 import { prisma } from "../app.js";
-import { seedAccountCategories } from "../prisma/seeders/accountCategories.js";
+import { ASSET_TYPE_ID, LIABILITY_TYPE_ID } from "../lib/constants.js";
 
 const router = express.Router();
 
@@ -262,70 +262,34 @@ router.get("/user/:userId", async (req, res) => {
                 : 0;
         }
 
-        if (countTotalValues) {
-            const totalAssets: { totalAssets: number }[] = await prisma.$queryRaw`
-            SELECT 
-                SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalAssets"
-            FROM 
-                financial_accounts fa
-            JOIN 
-                account_categories ac ON fa.category_id = ac.id
-            JOIN 
-                account_types at ON ac.type_id = at.id
-            LEFT JOIN (
-                SELECT 
-                    account_id, 
-                SUM(
-                    CASE
-                        WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate) + fa.initial_value
-                        ELSE t.amount + fa.initial_value
-                    END
-                ) AS totalAmount
-                FROM 
-                    transactions t
-                INNER JOIN financial_accounts fa ON t.account_id = fa.id
-                LEFT JOIN currencies c ON t.currency_id = c.id
-                LEFT JOIN currencies fc ON fa.currency_id = fc.id
-                GROUP BY 
-                    account_id
-            ) t ON fa.id = t.account_id
-            WHERE 
-                at.name = 'Asset'
-            `;
+        const assetsInitialValues = await prisma.financialAccount.aggregate({
+            _sum: {
+                initialValue: true,
+            },
+            where: {
+                accountCategory: {
+                    accountType: {
+                        id: ASSET_TYPE_ID,
+                    },
+                },
+            },
+        });
 
-            const totalLiabilities: { totalLiabilities: number }[] = await prisma.$queryRaw`
-                SELECT 
-                    SUM(fa.initial_value + COALESCE(t.totalAmount, 0)) AS "totalLiabilities"
-                FROM 
-                    financial_accounts fa
-                JOIN 
-                    account_categories ac ON fa.category_id = ac.id
-                JOIN 
-                    account_types at ON ac.type_id = at.id
-                LEFT JOIN (
-                    SELECT 
-                        account_id, 
-                    SUM(
-                        CASE
-                            WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
-                            ELSE t.amount
-                        END
-                    ) AS totalAmount
-                    FROM 
-                        transactions t
-                    INNER JOIN financial_accounts fa ON t.account_id = fa.id
-                    LEFT JOIN currencies c ON t.currency_id = c.id
-                    LEFT JOIN currencies fc ON fa.currency_id = fc.id
-                    GROUP BY 
-                        account_id
-                ) t ON fa.id = t.account_id
-                WHERE 
-                    at.name = 'Liability'
-            `;
+        const liabilitiesInitialValues = await prisma.financialAccount.aggregate({
+            _sum: {
+                initialValue: true,
+            },
+            where: {
+                accountCategory: {
+                    accountType: {
+                        id: LIABILITY_TYPE_ID,
+                    },
+                },
+            },
+        });
 
-            results.totalAssets = totalAssets[0].totalAssets ? totalAssets[0].totalAssets : 0;
-            results.totalLiabilities = totalLiabilities[0].totalLiabilities ? totalLiabilities[0].totalLiabilities : 0;
-        }
+        results.assetsInitialValues = Number(assetsInitialValues._sum.initialValue);
+        results.liabilitiesInitialValues = Number(liabilitiesInitialValues._sum.initialValue);
 
         return res.status(200).json(results);
     } catch (e) {
