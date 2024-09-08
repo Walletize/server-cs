@@ -154,7 +154,6 @@ router.get("/user/:userId", async (req, res) => {
     try {
         const localUser = res.locals.user as User;
         const userId = req.params.userId;
-        const countTotalValues = req.query.countTotalValues;
         const startDate = req.query.startDate;
 
         if (localUser.id !== localUser.id) {
@@ -207,7 +206,20 @@ router.get("/user/:userId", async (req, res) => {
                             END
                         ), 
                         0
-                    ) AS "currentValue"
+                    ) AS "currentValue",
+                    fa.initial_value + COALESCE(
+                        SUM(
+                            CASE 
+                                WHEN t.date < ${startDate}::date
+                                THEN 
+                                    CASE
+                                        WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
+                                        ELSE t.amount 
+                                    END
+                            END
+                        ),
+                        0
+                    ) AS "prevValue"
             FROM financial_accounts fa
             JOIN account_categories ac ON fa.category_id = ac.id
             JOIN account_types at ON ac.type_id = at.id
@@ -228,8 +240,8 @@ router.get("/user/:userId", async (req, res) => {
             const prevAssetsValue: { prevAssetsValue: number }[] = await prisma.$queryRaw`
                 SELECT SUM(
                     CASE
-                        WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate) + fa.initial_value
-                        ELSE t.amount + fa.initial_value
+                        WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate)
+                        ELSE t.amount
                     END
                 ) AS "prevAssetsValue"
                 FROM transactions t
