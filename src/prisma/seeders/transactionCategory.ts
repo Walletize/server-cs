@@ -4,10 +4,21 @@ export async function seedDefaultTransactionCategories(prisma: PrismaClient) {
     await prisma.transactionCategory.create({
         data: {
             id: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
-            name: "Transfer",
+            name: "Incoming Transfer",
             typeId: "1139551e-7723-49e3-89cd-a73fa6600580",
             icon: "arrow-right-left.svg",
             color: "#60a5fa",
+            iconColor: "white",
+        },
+    });
+    
+    await prisma.transactionCategory.create({
+        data: {
+            id: "befc41b9-2417-4d9e-b2b4-be92a0613156",
+            name: "Outgoing Transfer",
+            typeId: "1139551e-7723-49e3-89cd-a73fa6600580",
+            icon: "arrow-right-left.svg",
+            color: "#de8d00",
             iconColor: "white",
         },
     });

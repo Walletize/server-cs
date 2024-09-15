@@ -2,7 +2,7 @@ import { AccountCategory, FinancialAccount } from "@prisma/client";
 import express from "express";
 import { User } from "lucia";
 import { prisma } from "../app.js";
-import { ASSET_TYPE_ID, LIABILITY_TYPE_ID } from "../lib/constants.js";
+import { ASSET_ID, LIABILITY_ID } from "../lib/constants.js";
 
 const router = express.Router();
 
@@ -97,6 +97,7 @@ router.get("/:accountId", async (req, res) => {
                 fa.icon AS "icon",
                 fa.color AS "color",
                 fa.icon_color AS "iconColor",
+                fa.enable_income_expenses AS "enableIncomeExpenses",
                 fa.created_at AS "createdAt",
                 fa.updated_at AS "updatedAt",
                 jsonb_build_object(
@@ -173,6 +174,7 @@ router.get("/user/:userId", async (req, res) => {
                 fa.icon AS "icon",
                 fa.color AS "color",
                 fa.icon_color AS "iconColor",
+                fa.enable_income_expenses AS "enableIncomeExpenses",
                 fa.created_at AS "createdAt",
                 fa.updated_at AS "updatedAt",
                 jsonb_build_object(
@@ -281,7 +283,7 @@ router.get("/user/:userId", async (req, res) => {
             where: {
                 accountCategory: {
                     accountType: {
-                        id: ASSET_TYPE_ID,
+                        id: ASSET_ID,
                     },
                 },
             },
@@ -294,7 +296,7 @@ router.get("/user/:userId", async (req, res) => {
             where: {
                 accountCategory: {
                     accountType: {
-                        id: LIABILITY_TYPE_ID,
+                        id: LIABILITY_ID,
                     },
                 },
             },
