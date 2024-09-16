@@ -3,6 +3,7 @@ import express from "express";
 import { prisma } from "../app.js";
 import { getPreviousMonthPeriod, getPreviousPeriod } from "../lib/utils.js";
 import { User } from "lucia";
+import { EXPENSE_ID, INCOME_ID, INCOMING_TRANSFER_ID, OUTGOING_TRANSFER_ID } from "../lib/constants.js";
 
 const router = express.Router();
 
@@ -40,9 +41,11 @@ router.post("/transfer", async (req, res) => {
         const destinationAccountId = req.body.destinationAccountId as string;
         const destinationAccountCurrencyId = req.body.destinationAccountCurrencyId as string;
         const selectedCurrencyId = req.body.selectedCurrencyId as string;
-        const date = req.body.date;
-        const amount = req.body.amount;
-        const rate = req.body.rate;
+        const date = req.body.date as string;
+        const amount = req.body.amount as number;
+        const rate = req.body.rate as number | null;
+        const categoryId =  req.body.categoryId as string | null;
+        const typeId = req.body.typeId as string | null;
 
         const originAccount = await prisma.financialAccount.findUnique({
             where: {
@@ -66,7 +69,7 @@ router.post("/transfer", async (req, res) => {
                 rate: selectedCurrencyId !== originAccountCurrencyId ? rate : null,
                 accountId: originAccountId,
                 currencyId: selectedCurrencyId,
-                categoryId: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
+                categoryId: typeId === EXPENSE_ID && categoryId ? categoryId : OUTGOING_TRANSFER_ID,
             },
         });
         const destinationTranasaction = await prisma.transaction.create({
@@ -76,7 +79,7 @@ router.post("/transfer", async (req, res) => {
                 rate: selectedCurrencyId !== destinationAccountCurrencyId ? rate : null,
                 accountId: destinationAccountId,
                 currencyId: selectedCurrencyId,
-                categoryId: "cfb050f6-dd57-4061-89a8-4fc5c10e777e",
+                categoryId: typeId === INCOME_ID && categoryId ? categoryId : INCOMING_TRANSFER_ID,
             },
         });
         await prisma.transactionTransfer.create({
@@ -102,7 +105,9 @@ router.post("/update", async (req, res) => {
         const rate = req.body.rate;
         const currencyId = req.body.currencyId;
         const accountId = req.body.accountId;
-
+        const categoryId = req.body.categoryId as string | null;
+        const typeId = req.body.typeId as string | null;
+        
         const account = await prisma.financialAccount.findUnique({
             where: {
                 id: accountId,
@@ -119,7 +124,7 @@ router.post("/update", async (req, res) => {
             },
             where: {
                 accountId: accountId,
-            },
+            },  
         });
         if (!result._sum.amount) {
             return res.status(500).json();
