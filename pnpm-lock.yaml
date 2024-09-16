@@ -44,6 +44,9 @@ dependencies:
   react:
     specifier: ^18.3.1
     version: 18.3.1
+  rrule:
+    specifier: ^2.8.1
+    version: 2.8.1
 
 devDependencies:
   '@types/express':
@@ -3056,6 +3059,12 @@ packages:
 
   /regenerator-runtime@0.14.1:
     resolution: {integrity: sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw==}
+    dev: false
+
+  /rrule@2.8.1:
+    resolution: {integrity: sha512-hM3dHSBMeaJ0Ktp7W38BJZ7O1zOgaFEsn41PDk+yHoEtfLV+PoJt9E9xAlZiWgf/iqEqionN0ebHFZIDAp+iGw==}
+    dependencies:
+      tslib: 2.6.2
     dev: false
 
   /safe-buffer@5.2.1:
