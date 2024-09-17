@@ -1,16 +1,19 @@
 import { Prisma, Transaction, TransactionCategory } from "@prisma/client";
 import express from "express";
-import { prisma } from "../app.js";
-import { getPreviousMonthPeriod, getPreviousPeriod } from "../lib/utils.js";
 import { User } from "lucia";
+import { RRule } from "rrule/dist/esm/rrule.js";
+import { prisma } from "../app.js";
 import { EXPENSE_ID, INCOME_ID, INCOMING_TRANSFER_ID, OUTGOING_TRANSFER_ID } from "../lib/constants.js";
+import { getPreviousMonthPeriod, getPreviousPeriod } from "../lib/utils.js";
 
 const router = express.Router();
 
 router.post("/", async (req, res) => {
     try {
         const localUser = res.locals.user as User;
-        const transaction = req.body as Transaction;
+        const transaction = req.body.transaction as Transaction;
+        const selectedReccurence = req.body.selectedReccurence as string;
+        const recurrenceEndDate = req.body.recurrenceEndDate as string;
 
         const account = await prisma.financialAccount.findUnique({
             where: {
@@ -22,9 +25,110 @@ router.post("/", async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
-        await prisma.transaction.create({
-            data: transaction,
-        });
+        if (selectedReccurence !== "never") {
+            let rrule = new RRule({
+                freq: RRule.DAILY,
+                dtstart: new Date(transaction.date),
+                count: 0,
+            });
+            if (selectedReccurence === "everyDay") {
+                rrule = new RRule({
+                    freq: RRule.DAILY,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyTwoDays") {
+                rrule = new RRule({
+                    freq: RRule.DAILY,
+                    interval: 2,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyWeekday") {
+                rrule = new RRule({
+                    freq: RRule.DAILY,
+                    byweekday: [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR],
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyWeekend") {
+                rrule = new RRule({
+                    freq: RRule.DAILY,
+                    byweekday: [RRule.SA, RRule.SU],
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyWeek") {
+                rrule = new RRule({
+                    freq: RRule.WEEKLY,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyTwoWeeks") {
+                rrule = new RRule({
+                    freq: RRule.WEEKLY,
+                    interval: 2,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyFourWeeks") {
+                rrule = new RRule({
+                    freq: RRule.WEEKLY,
+                    interval: 4,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyMonth") {
+                rrule = new RRule({
+                    freq: RRule.MONTHLY,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyTwoMonths") {
+                rrule = new RRule({
+                    freq: RRule.MONTHLY,
+                    interval: 2,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyThreeMonths") {
+                rrule = new RRule({
+                    freq: RRule.MONTHLY,
+                    interval: 3,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everySixMonths") {
+                rrule = new RRule({
+                    freq: RRule.MONTHLY,
+                    interval: 6,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            } else if (selectedReccurence === "everyYear") {
+                rrule = new RRule({
+                    freq: RRule.YEARLY,
+                    dtstart: new Date(transaction.date),
+                    until: new Date(recurrenceEndDate),
+                });
+            }
+
+            const recurringTransactions: Transaction[] = rrule.all().map((date) => {
+                const recurringTransaction = {
+                    ...transaction,
+                    date: date,
+                };
+                return recurringTransaction;
+            });
+
+            await prisma.transaction.createMany({
+                data: recurringTransactions,
+            });
+        } else {
+            await prisma.transaction.create({
+                data: transaction,
+            });
+        }
 
         return res.status(200).json({ message: "Success" });
     } catch (e) {
@@ -44,7 +148,7 @@ router.post("/transfer", async (req, res) => {
         const date = req.body.date as string;
         const amount = req.body.amount as number;
         const rate = req.body.rate as number | null;
-        const categoryId =  req.body.categoryId as string | null;
+        const categoryId = req.body.categoryId as string | null;
         const typeId = req.body.typeId as string | null;
 
         const originAccount = await prisma.financialAccount.findUnique({
@@ -107,7 +211,7 @@ router.post("/update", async (req, res) => {
         const accountId = req.body.accountId;
         const categoryId = req.body.categoryId as string | null;
         const typeId = req.body.typeId as string | null;
-        
+
         const account = await prisma.financialAccount.findUnique({
             where: {
                 id: accountId,
@@ -124,7 +228,7 @@ router.post("/update", async (req, res) => {
             },
             where: {
                 accountId: accountId,
-            },  
+            },
         });
         if (!result._sum.amount) {
             return res.status(500).json();
@@ -340,9 +444,7 @@ router.get("/account/:accountId", async (req, res) => {
              `;
 
         const groupedTransactions = JSON.parse(
-            JSON.stringify(rawGroupedTransactions, (_, value) =>
-                typeof value === "bigint" ? value.toString() : value
-            )
+            JSON.stringify(rawGroupedTransactions, (_, value) => (typeof value === "bigint" ? value.toString() : value))
         );
 
         const prevIncome: any = await prisma.$queryRaw`
@@ -579,9 +681,7 @@ router.get("/user/:userId", async (req, res) => {
              `;
 
         const groupedTransactions = JSON.parse(
-            JSON.stringify(rawGroupedTransactions, (_, value) =>
-                typeof value === "bigint" ? value.toString() : value
-            )
+            JSON.stringify(rawGroupedTransactions, (_, value) => (typeof value === "bigint" ? value.toString() : value))
         );
 
         const prevIncome: any = await prisma.$queryRaw`
