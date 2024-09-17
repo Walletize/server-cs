@@ -5,6 +5,7 @@ import { RRule } from "rrule/dist/esm/rrule.js";
 import { prisma } from "../app.js";
 import { EXPENSE_ID, INCOME_ID, INCOMING_TRANSFER_ID, OUTGOING_TRANSFER_ID } from "../lib/constants.js";
 import { getPreviousMonthPeriod, getPreviousPeriod } from "../lib/utils.js";
+import { v4 as uuidv4 } from "uuid";
 
 const router = express.Router();
 
@@ -113,10 +114,12 @@ router.post("/", async (req, res) => {
                 });
             }
 
+            const uuid = uuidv4();
             const recurringTransactions: Transaction[] = rrule.all().map((date) => {
                 const recurringTransaction = {
                     ...transaction,
                     date: date,
+                    recurrenceId: uuid,
                 };
                 return recurringTransaction;
             });
@@ -364,6 +367,7 @@ router.get("/account/:accountId", async (req, res) => {
                         'rate', t.rate,
                         'accountId', t.account_id,
                         'currencyId', t.currency_id,
+                        'recurrenceId', t.recurrence_id,
                         'createdAt', t.created_at,
                         'updatedAt', t.updated_at,
                         'transactionCategory', json_build_object(
@@ -601,6 +605,7 @@ router.get("/user/:userId", async (req, res) => {
                         'rate', t.rate,
                         'accountId', t.account_id,
                         'currencyId', t.currency_id,
+                        'recurrenceId', t.recurrence_id,
                         'createdAt', t.created_at,
                         'updatedAt', t.updated_at,
                         'transactionCategory', json_build_object(
