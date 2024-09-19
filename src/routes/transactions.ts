@@ -2,10 +2,10 @@ import { Prisma, Transaction, TransactionCategory } from "@prisma/client";
 import express from "express";
 import { User } from "lucia";
 import { RRule } from "rrule/dist/esm/rrule.js";
+import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../app.js";
 import { EXPENSE_ID, INCOME_ID, INCOMING_TRANSFER_ID, OUTGOING_TRANSFER_ID } from "../lib/constants.js";
 import { getPreviousMonthPeriod, getPreviousPeriod } from "../lib/utils.js";
-import { v4 as uuidv4 } from "uuid";
 
 const router = express.Router();
 
@@ -529,13 +529,19 @@ router.get("/account/:accountId", async (req, res) => {
 router.get("/user/:userId", async (req, res) => {
     try {
         const localUser = res.locals.user as User;
-        const userId = req.params.userId;
-        const startDateStr = req.query.startDate;
-        const endDateStr = req.query.endDate;
+        const userId = req.params.userId as string;
+        const startDateStr = req.query.startDate as string | undefined;
+        const endDateStr = req.query.endDate as string | undefined;
+        const page = req.query.page as string | undefined;
 
         if (localUser.id !== userId) {
             return res.status(403).json({ message: "Forbidden" });
         }
+
+        // if (startDateStr && endDateStr) {
+        //     const startDate = new Date(startDateStr);
+        //     const endDate = new Date(endDateStr);
+        // }
 
         let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.user_id = ${userId}`;
@@ -682,12 +688,28 @@ router.get("/user/:userId", async (req, res) => {
                 JOIN currencies uc ON u.main_currency_id = uc.id
                 ${groupedTransactionsWhereClause}
                 GROUP BY "transactionDate"
-                ORDER BY "transactionDate" DESC;
+                ORDER BY "transactionDate" DESC
+                LIMIT 10 OFFSET ${page ? (parseInt(page) - 1) * 10 : 0};
              `;
-
         const groupedTransactions = JSON.parse(
             JSON.stringify(rawGroupedTransactions, (_, value) => (typeof value === "bigint" ? value.toString() : value))
         );
+
+        const rawGroupedTransactionsCount: [{ count: bigint }] = await prisma.$queryRaw`
+                SELECT COUNT(*)
+                FROM transactions t
+                JOIN transaction_categories tc ON t.category_id = tc.id
+                JOIN transaction_types tt ON tc.type_id = tt.id
+                JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN account_categories ac ON fa.category_id = ac.id
+                JOIN account_types at ON ac.type_id = at.id
+                JOIN currencies c ON t.currency_id = c.id
+                JOIN currencies fc ON fa.currency_id = fc.id
+                JOIN users u ON fa.user_id = u.id
+                JOIN currencies uc ON u.main_currency_id = uc.id
+                ${groupedTransactionsWhereClause};
+             `;
+        const groupedTransactionsCount = Number(rawGroupedTransactionsCount[0].count);
 
         const prevIncome: any = await prisma.$queryRaw`
             SELECT SUM(
@@ -755,6 +777,7 @@ router.get("/user/:userId", async (req, res) => {
             prevIncome: prevIncome[0]?.prevIncome || 0,
             prevExpenses: prevExpenses[0]?.prevExpenses || 0,
             groupedTransactions,
+            groupedTransactionsCount,
         };
 
         return res.status(200).json(combinedResults);
