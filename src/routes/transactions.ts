@@ -696,7 +696,9 @@ router.get("/user/:userId", async (req, res) => {
         );
 
         const rawGroupedTransactionsCount: [{ count: bigint }] = await prisma.$queryRaw`
-                SELECT COUNT(*)
+            SELECT COUNT(*)
+            FROM (
+                SELECT DATE_TRUNC('day', t.date) AS "transactionDate"
                 FROM transactions t
                 JOIN transaction_categories tc ON t.category_id = tc.id
                 JOIN transaction_types tt ON tc.type_id = tt.id
@@ -707,8 +709,10 @@ router.get("/user/:userId", async (req, res) => {
                 JOIN currencies fc ON fa.currency_id = fc.id
                 JOIN users u ON fa.user_id = u.id
                 JOIN currencies uc ON u.main_currency_id = uc.id
-                ${groupedTransactionsWhereClause};
-             `;
+                ${groupedTransactionsWhereClause}
+                GROUP BY "transactionDate"
+        ) AS groupedTransactions;
+        `;
         const groupedTransactionsCount = Number(rawGroupedTransactionsCount[0].count);
 
         const prevIncome: any = await prisma.$queryRaw`
