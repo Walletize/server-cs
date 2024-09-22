@@ -657,11 +657,10 @@ router.get("/user/:userId", async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
-        const transactionsStartEndDate: [{ max: Date; min: Date }] =
+        const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] =
             await prisma.$queryRaw`SELECT MAX(date), MIN(date) FROM "transactions"`;
-        const transactionsStartDate = transactionsStartEndDate[0].min;
-        const transactionsEndDate = transactionsStartEndDate[0].max;
-
+        const transactionsStartDate = transactionsStartEndDate[0].min || new Date();
+        const transactionsEndDate = transactionsStartEndDate[0].max || new Date();
         let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.user_id = ${userId}`;
         let chartDataStartDate = Prisma.sql`${transactionsStartDate}`;
