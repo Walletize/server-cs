@@ -285,9 +285,10 @@ router.get("/types/:userId", async (req, res) => {
 router.get("/account/:accountId", async (req, res) => {
     try {
         const localUser = res.locals.user as User;
-        const accountId = req.params.accountId;
-        const startDateStr = req.query.startDate;
-        const endDateStr = req.query.endDate;
+        const accountId = req.params.accountId as string;
+        const startDateStr = req.query.startDate as string | undefined;
+        const endDateStr = req.query.endDate as string | undefined;
+        const page = req.query.page as string | undefined;
 
         const account = await prisma.financialAccount.findUnique({
             where: {
@@ -299,11 +300,24 @@ router.get("/account/:accountId", async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
+        const transactionsStartEndDate: [{ max: Date; min: Date }] = await prisma.$queryRaw`
+            SELECT MAX(date), MIN(date) FROM "transactions" WHERE account_id = ${accountId}
+        `;
+        const transactionsStartDate = transactionsStartEndDate[0].min;
+        const transactionsEndDate = transactionsStartEndDate[0].max;
+
         let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId}`;
+        let chartDataStartDate = Prisma.sql`${transactionsStartDate}`;
+        let chartDataEndDate = Prisma.sql`${transactionsEndDate}`;
+        let chartDataInterval = Prisma.sql`${getDateInterval(transactionsStartDate, transactionsEndDate)}`;
+
         if (startDateStr && startDateStr != "" && endDateStr && endDateStr != "") {
             previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
             groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${startDateStr}::date AND t.date <= ${endDateStr}::date`;
+            chartDataStartDate = Prisma.sql`${startDateStr}`;
+            chartDataEndDate = Prisma.sql`${endDateStr}`;
+            chartDataInterval = Prisma.sql`${getDateInterval(new Date(startDateStr), new Date(endDateStr))}`;
         }
         let prevValuesWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${previousPeriod.startDate}::date AND t.date <= ${previousPeriod.endDate}::date`;
 
@@ -444,12 +458,115 @@ router.get("/account/:accountId", async (req, res) => {
                 JOIN currencies uc ON u.main_currency_id = uc.id
                 ${groupedTransactionsWhereClause}
                 GROUP BY "transactionDate"
-                ORDER BY "transactionDate" DESC;
+                ORDER BY "transactionDate" DESC
+                LIMIT 10 OFFSET ${page ? (parseInt(page) - 1) * 10 : 0};
              `;
 
         const groupedTransactions = JSON.parse(
             JSON.stringify(rawGroupedTransactions, (_, value) => (typeof value === "bigint" ? value.toString() : value))
         );
+
+        const rawGroupedTransactionsCount: [{ count: bigint }] = await prisma.$queryRaw`
+            SELECT COUNT(*)
+            FROM (
+                SELECT DATE_TRUNC('day', t.date) AS "transactionDate"
+                FROM transactions t
+                JOIN transaction_categories tc ON t.category_id = tc.id
+                JOIN transaction_types tt ON tc.type_id = tt.id
+                JOIN financial_accounts fa ON t.account_id = fa.id
+                JOIN account_categories ac ON fa.category_id = ac.id
+                JOIN account_types at ON ac.type_id = at.id
+                JOIN currencies c ON t.currency_id = c.id
+                JOIN currencies fc ON fa.currency_id = fc.id
+                JOIN users u ON fa.user_id = u.id
+                JOIN currencies uc ON u.main_currency_id = uc.id
+                ${groupedTransactionsWhereClause}
+                GROUP BY "transactionDate"
+            ) AS groupedTransactions;
+        `;
+        const groupedTransactionsCount = Number(rawGroupedTransactionsCount[0].count);
+
+        const chartData = await prisma.$queryRaw`
+            WITH date_series AS (
+                SELECT generate_series(
+                    ${chartDataStartDate}::date, 
+                    ${chartDataEndDate}::date - interval '1 day', 
+                    ${chartDataInterval}::interval
+                )::date AS date
+                UNION 
+                SELECT ${chartDataEndDate}::date AS date
+            ),
+            all_dates AS (
+                SELECT generate_series(
+                    ${chartDataStartDate}::date, 
+                    ${chartDataEndDate}::date, 
+                    '1 day'::interval
+                )::date AS date
+            ),
+            aggregated_data AS (
+                SELECT 
+                    ad.date, 
+                    COALESCE(SUM(t."amount"), 0) AS totalAmount,
+                    COALESCE(SUM(CASE 
+                        WHEN tt."name" = 'Income' THEN t."amount" 
+                        ELSE 0 
+                    END), 0) AS totalIncome,
+                    COALESCE(SUM(CASE 
+                        WHEN tt."name" = 'Expense' THEN ABS(t."amount") 
+                        ELSE 0 
+                    END), 0) AS totalExpenses,
+                    COALESCE(SUM(CASE 
+                        WHEN at."name" = 'Asset' THEN t."amount" 
+                        ELSE 0 
+                    END), 0) AS totalAssetsTransactions,
+                    COALESCE(SUM(CASE 
+                        WHEN at."name" = 'Liability' THEN t."amount" 
+                        ELSE 0 
+                    END), 0) AS totalLiabilitiesTransactions
+                FROM 
+                    all_dates ad
+                LEFT JOIN 
+                    "transactions" t ON ad.date = t.date AND t."account_id" = ${accountId}
+                LEFT JOIN 
+                    "transaction_categories" tc ON t."category_id" = tc."id"
+                LEFT JOIN 
+                    "transaction_types" tt ON tc."type_id" = tt."id"
+                LEFT JOIN 
+                    "financial_accounts" fa ON t."account_id" = fa."id"
+                LEFT JOIN 
+                    "account_categories" ac ON fa."category_id" = ac."id"
+                LEFT JOIN 
+                    "account_types" at ON ac."type_id" = at."id"
+                GROUP BY 
+                    ad.date
+                ORDER BY 
+                    ad.date
+            ),
+            cumulative_data AS (
+                SELECT 
+                    date, 
+                    SUM(totalAmount) OVER (ORDER BY date) AS "cumulativeAmount",
+                    SUM(totalIncome) OVER (ORDER BY date) AS "cumulativeIncome",
+                    SUM(totalExpenses) OVER (ORDER BY date) AS "cumulativeExpenses",
+                    SUM(totalAssetsTransactions) OVER (ORDER BY date) AS "cumulativeAssetsTransactions",
+                    SUM(totalLiabilitiesTransactions) OVER (ORDER BY date) AS "cumulativeLiabilitiesTransactions"
+                FROM 
+                    aggregated_data
+            )
+            SELECT 
+                cd.date, 
+                cd."cumulativeAmount",
+                cd."cumulativeIncome",
+                cd."cumulativeExpenses",
+                cd."cumulativeAssetsTransactions",
+                cd."cumulativeLiabilitiesTransactions"
+            FROM 
+                cumulative_data cd
+            JOIN 
+                date_series ds ON cd.date = ds.date
+            ORDER BY 
+                cd.date;
+        `;
 
         const prevIncome: any = await prisma.$queryRaw`
                 SELECT SUM(
@@ -517,6 +634,8 @@ router.get("/account/:accountId", async (req, res) => {
             prevIncome: prevIncome[0]?.prevIncome || 0,
             prevExpenses: prevExpenses[0]?.prevExpenses || 0,
             groupedTransactions,
+            groupedTransactionsCount,
+            chartData,
         };
 
         return res.status(200).json(combinedResults);
@@ -768,7 +887,7 @@ router.get("/user/:userId", async (req, res) => {
                 LEFT JOIN 
                     "transaction_types" tt ON tc."type_id" = tt."id"
                 LEFT JOIN 
-                    "financial_accounts" fa ON t."account_id" = fa."id"
+                    "financial_accounts" fa ON t."account_id" = fa."id" AND fa."user_id" = ${userId}
                 LEFT JOIN 
                     "account_categories" ac ON fa."category_id" = ac."id"
                 LEFT JOIN 
