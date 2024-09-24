@@ -85,3 +85,28 @@ export function getPreviousMonthPeriod() {
         endDate: formatDate(endDate),
     };
 }
+
+export function getDateInterval(startDate: Date, endDate: Date): string  {
+    const timeDiff = endDate.getTime() - startDate.getTime();
+
+    const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+
+    const daysInMonth = 31;
+    const daysInYear = 365;
+
+    if (daysDiff < daysInMonth) {
+        return '1 day';
+    } else if (daysDiff < 3 * daysInMonth) {
+        return "2 days";
+    } else if (daysDiff < 6 * daysInMonth) {
+        return "3 days";
+    } else if (daysDiff < 9 * daysInMonth) {
+        return "5 days";
+    } else if (daysDiff < 2 * daysInYear) {
+        return "1 week";
+    } else if (daysDiff < 5 * daysInYear) {
+        return "1 month";
+    } else {
+        return "1 year";
+    }
+}

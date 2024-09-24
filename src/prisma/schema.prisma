@@ -142,6 +142,7 @@ model Transaction {
   accountId                       String                @map("account_id")
   categoryId                      String                @map("category_id")
   currencyId                      String                @map("currency_id")
+  recurrenceId                    String?               @map("recurrence_id")
   financialAccount                FinancialAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transactionCategory             TransactionCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   currency                        Currency              @relation(fields: [currencyId], references: [id], onDelete: Cascade)
