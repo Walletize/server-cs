@@ -1,18 +1,18 @@
 import { hash, verify } from "@node-rs/argon2";
-import express from 'express';
-import { isWithinExpirationDate } from 'oslo';
+import express from "express";
+import { User } from "lucia";
+import { isWithinExpirationDate } from "oslo";
 import { sha256 } from "oslo/crypto";
 import { encodeHex } from "oslo/encoding";
 import { lucia, prisma } from "../app.js";
-import { sendPasswordResetToken, sendVerificationCode } from '../email/email.js';
-import { createPasswordResetToken, generateEmailVerificationCode, verifyVerificationCode } from '../lib/auth.js';
-import { seedUserTransactionCategories } from "../prisma/seeders/transactionCategory.js";
+import { sendPasswordResetToken, sendVerificationCode } from "../email/email.js";
+import { createPasswordResetToken, generateEmailVerificationCode, verifyVerificationCode } from "../lib/auth.js";
 import { seedAccountCategories } from "../prisma/seeders/accountCategories.js";
-import { User } from "lucia";
+import { seedUserTransactionCategories } from "../prisma/seeders/transactionCategory.js";
 
 const router = express.Router();
 
-router.post('/signup', async (req, res) => {
+router.post("/signup", async (req, res) => {
     const user = req.body;
     const name = user.name;
     const email = user.email;
@@ -22,13 +22,12 @@ router.post('/signup', async (req, res) => {
         email.length > 254 || // maximum length for a valid email
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     ) {
-        return res.status(400).json("Invalid email");
+        return res.status(400).json("invalid_email");
     }
     const password = user.password;
     if (typeof password !== "string" || password.length < 6 || password.length > 255) {
-        return res.status(400).json("Invalid password");
+        return res.status(400).json("invalid_password");
     }
-
 
     const existingUser = await prisma.user.findUnique({
         where: {
@@ -36,14 +35,14 @@ router.post('/signup', async (req, res) => {
         },
     });
     if (existingUser) {
-        return res.status(400).json("Email taken");
-    };
+        return res.status(400).json("email_taken");
+    }
 
     const passwordHash = await hash(password, {
         memoryCost: 19456,
         timeCost: 2,
         outputLen: 32,
-        parallelism: 1
+        parallelism: 1,
     });
 
     const newUser = await prisma.user.create({
@@ -51,65 +50,69 @@ router.post('/signup', async (req, res) => {
             email: email,
             name: name,
             passwordHash: passwordHash,
-            emailVerified: false
-        }
+            emailVerified: false,
+        },
     });
 
     const verificationCode = await generateEmailVerificationCode(newUser.id, email);
     if (verificationCode) {
         sendVerificationCode(email, name, verificationCode);
-    };
+    }
 
     const session = await lucia.createSession(newUser.id, {});
     const sessionCookie = lucia.createSessionCookie(session.id).serialize();
     res.set("Set-Cookie", sessionCookie);
 
-    return res.status(200).json("Sign up successful");
+    return res.status(200).json("signup_successful");
 });
 
-router.post('/login', async (req, res) => {
-    const user = req.body;
-    const email = user.email;
-    if (
-        typeof email !== "string" ||
-        email.length < 5 || // minimum length for a valid email (e.g., a@b.c)
-        email.length > 254 || // maximum length for a valid email
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
-        return res.status(400).json("Invalid email");
+router.post("/login", async (req, res) => {
+    try {
+        const user = req.body;
+        const email = user.email;
+        if (
+            typeof email !== "string" ||
+            email.length < 5 || // minimum length for a valid email (e.g., a@b.c)
+            email.length > 254 || // maximum length for a valid email
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+        ) {
+            return res.status(400).json("invalid_email");
+        }
+        const password = user.password;
+        if (typeof password !== "string" || password.length < 6 || password.length > 255) {
+            return res.status(400).json("invalid_password");
+        }
+
+        const existingUser = await prisma.user.findUnique({
+            where: {
+                email: email,
+            },
+        });
+        if (!existingUser) {
+            return res.status(400).json("incorrect_credentials");
+        }
+
+        const validPassword = await verify(existingUser.passwordHash || "", password, {
+            memoryCost: 19456,
+            timeCost: 2,
+            outputLen: 32,
+            parallelism: 1,
+        });
+        if (!validPassword) {
+            return res.status(400).json("incorrect_credentials");
+        }
+
+        const session = await lucia.createSession(existingUser.id, {});
+        const sessionCookie = lucia.createSessionCookie(session.id).serialize();
+        res.set("Set-Cookie", sessionCookie);
+
+        return res.status(200).json("login_success");
+    } catch {
+        return res.status(500).json("internal_error");
     }
-    const password = user.password;
-    if (typeof password !== "string" || password.length < 6 || password.length > 255) {
-        return res.status(400).json("Invalid password");
-    }
-
-    const existingUser = await prisma.user.findUnique({
-        where: {
-            email: email,
-        },
-    });
-    if (!existingUser) {
-        return res.status(400).json("Incorrect username or password");
-    };
-
-    const validPassword = await verify(existingUser.passwordHash || "", password, {
-        memoryCost: 19456,
-        timeCost: 2,
-        outputLen: 32,
-        parallelism: 1
-    });
-    if (!validPassword) {
-        return res.status(400).json("Incorrect username or password");
-    }
-
-    const session = await lucia.createSession(existingUser.id, {});
-    const sessionCookie = lucia.createSessionCookie(session.id).serialize();
-    res.set("Set-Cookie", sessionCookie);
-
-    return res.status(200).json("Login successful");
 });
 
-router.get('/session/validate', async (req, res) => {
+router.get("/session/validate", async (req, res) => {
     if (res.locals.user) {
         const localUser = res.locals.user as User;
         const user = await prisma.user.findUnique({
@@ -123,13 +126,13 @@ router.get('/session/validate', async (req, res) => {
                 subscriptions: {
                     where: {
                         status: {
-                            in: ["active", "trialing"]
-                        }
+                            in: ["active", "trialing"],
+                        },
                     },
                     include: {
-                        plan: true
-                    }
-                }
+                        plan: true,
+                    },
+                },
             },
             where: {
                 id: localUser.id,
@@ -137,12 +140,12 @@ router.get('/session/validate', async (req, res) => {
         });
 
         return res.status(200).json(user);
-    };
- 
+    }
+
     return res.status(200).json(null);
 });
 
-router.get('/logout', async (req, res) => {
+router.get("/logout", async (req, res) => {
     if (!res.locals.session) {
         return res.status(401).end();
     }
@@ -154,7 +157,7 @@ router.get('/logout', async (req, res) => {
     return res.status(200).json("Log out successful");
 });
 
-router.post('/login/:providerId', async (req, res) => {
+router.post("/login/:providerId", async (req, res) => {
     const user = req.body;
     const providerId = req.params.providerId;
 
@@ -175,32 +178,32 @@ router.post('/login/:providerId', async (req, res) => {
                 data: {
                     userId: existingUser.id,
                     providerId: providerId,
-                    providerUserId: user.providerUserId
-                }
+                    providerUserId: user.providerUserId,
+                },
             });
-        };
+        }
 
         const session = await lucia.createSession(existingUser.id, {});
         const sessionCookie = lucia.createSessionCookie(session.id).serialize();
         res.set("Set-Cookie", sessionCookie);
 
         return res.status(200).json("Login successful");
-    };
+    }
 
     const newUser = await prisma.user.create({
         data: {
             email: user.email,
             name: user.name,
             image: user.image,
-            emailVerified: true
-        }
+            emailVerified: true,
+        },
     });
     await prisma.oAuthAccount.create({
         data: {
             userId: newUser.id,
             providerId: providerId,
-            providerUserId: user.providerUserId
-        }
+            providerUserId: user.providerUserId,
+        },
     });
 
     await seedAccountCategories(prisma, newUser.id);
@@ -213,30 +216,30 @@ router.post('/login/:providerId', async (req, res) => {
     return res.status(200).json("Signup successful");
 });
 
-router.post('/email/verify', async (req, res) => {
+router.post("/email/verify", async (req, res) => {
     const code = req.body.code;
     if (typeof code !== "string") {
         return res.status(400).json("Verify email failed");
-    };
+    }
 
     const user = res.locals.user as User;
     if (!user) {
         return res.status(401).json("Verify email failed");
-    };
+    }
 
     const validCode = await verifyVerificationCode(user, code);
     if (!validCode) {
         return res.status(400).json("Verify email failed");
-    };
+    }
 
     await lucia.invalidateUserSessions(user.id);
     await prisma.user.update({
         where: {
-            id: user.id
+            id: user.id,
         },
         data: {
             emailVerified: true,
-        }
+        },
     });
 
     await seedAccountCategories(prisma, user.id);
@@ -249,49 +252,49 @@ router.post('/email/verify', async (req, res) => {
     return res.status(200).json("Verify email successful");
 });
 
-router.post('/email/resend', async (req, res) => {
+router.post("/email/resend", async (req, res) => {
     const user = res.locals.user as User;
     if (!user || !user.email) {
         return res.status(400).json("Resend email failed");
-    };
+    }
 
     const databaseCode = await prisma.emailVerificationCode.findFirst({
         where: {
             userId: user.id,
-        }
+        },
     });
     if (!databaseCode) {
         return res.status(400).json("Resend email failed");
-    };
+    }
 
     if (isWithinExpirationDate(databaseCode.timeoutUntil)) {
         return res.status(400).json("Resend email failed");
-    };
+    }
 
     const verificationCode = await generateEmailVerificationCode(user.id, user.email);
     if (verificationCode) {
         sendVerificationCode(user.email, user.name || user.email, verificationCode);
-    };
+    }
 
     return res.status(200).json("Resend email successful");
 });
 
-router.get('/email/resend', async (req, res) => {
+router.get("/email/resend", async (req, res) => {
     const user = res.locals.user as User;
 
     const databaseCode = await prisma.emailVerificationCode.findFirst({
         select: {
-            timeoutUntil: true
+            timeoutUntil: true,
         },
         where: {
             userId: user.id,
-        }
+        },
     });
 
     return res.status(200).json(databaseCode);
 });
 
-router.post('/password/reset', async (req, res) => {
+router.post("/password/reset", async (req, res) => {
     const body = req.body;
     const email = body.email;
     if (
@@ -316,18 +319,18 @@ router.post('/password/reset', async (req, res) => {
     const verificationLink = process.env.WEB_URL + "/password/reset/" + verificationToken;
     if (verificationToken) {
         sendPasswordResetToken(email, existingUser.name || "Walletize User", verificationLink);
-    };
+    }
 
     return res.status(200).json("Reset password email sent");
 });
 
-router.post('/password/reset/:token', async (req, res) => {
+router.post("/password/reset/:token", async (req, res) => {
     const verificationToken = req.params.token;
     const body = req.body;
     const password = body.password;
     if (typeof password !== "string" || password.length < 6 || password.length > 255) {
         return res.status(400).json("Invalid password");
-    };
+    }
 
     const tokenHash = encodeHex(await sha256(new TextEncoder().encode(verificationToken)));
     const token = await prisma.passwordResetToken.findFirst({
@@ -338,8 +341,8 @@ router.post('/password/reset/:token', async (req, res) => {
     if (token) {
         await prisma.passwordResetToken.deleteMany({
             where: {
-                tokenHash: tokenHash
-            }
+                tokenHash: tokenHash,
+            },
         });
     }
 
@@ -352,15 +355,15 @@ router.post('/password/reset/:token', async (req, res) => {
         memoryCost: 19456,
         timeCost: 2,
         outputLen: 32,
-        parallelism: 1
+        parallelism: 1,
     });
     await prisma.user.update({
         where: {
-            id: token.userId
+            id: token.userId,
         },
         data: {
             passwordHash: passwordHash,
-        }
+        },
     });
 
     const session = await lucia.createSession(token.userId, {});
