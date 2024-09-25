@@ -300,11 +300,10 @@ router.get("/account/:accountId", async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
-        const transactionsStartEndDate: [{ max: Date; min: Date }] = await prisma.$queryRaw`
-            SELECT MAX(date), MIN(date) FROM "transactions" WHERE account_id = ${accountId}
-        `;
-        const transactionsStartDate = transactionsStartEndDate[0].min;
-        const transactionsEndDate = transactionsStartEndDate[0].max;
+         const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] =
+             await prisma.$queryRaw`SELECT MAX(date), MIN(date) FROM "transactions" WHERE account_id = ${accountId}`;
+         const transactionsStartDate = transactionsStartEndDate[0].min || new Date();
+         const transactionsEndDate = transactionsStartEndDate[0].max || new Date();
 
         let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId}`;
@@ -461,7 +460,6 @@ router.get("/account/:accountId", async (req, res) => {
                 ORDER BY "transactionDate" DESC
                 LIMIT 10 OFFSET ${page ? (parseInt(page) - 1) * 10 : 0};
              `;
-
         const groupedTransactions = JSON.parse(
             JSON.stringify(rawGroupedTransactions, (_, value) => (typeof value === "bigint" ? value.toString() : value))
         );
@@ -526,7 +524,7 @@ router.get("/account/:accountId", async (req, res) => {
                 FROM 
                     all_dates ad
                 LEFT JOIN 
-                    "transactions" t ON ad.date = t.date AND t."account_id" = ${accountId}
+                    "transactions" t ON ad.date = t.date
                 LEFT JOIN 
                     "transaction_categories" tc ON t."category_id" = tc."id"
                 LEFT JOIN 
@@ -537,6 +535,8 @@ router.get("/account/:accountId", async (req, res) => {
                     "account_categories" ac ON fa."category_id" = ac."id"
                 LEFT JOIN 
                     "account_types" at ON ac."type_id" = at."id"
+                WHERE 
+                    (t."account_id" = ${accountId} OR fa."id" IS NULL)
                 GROUP BY 
                     ad.date
                 ORDER BY 
@@ -658,7 +658,13 @@ router.get("/user/:userId", async (req, res) => {
         }
 
         const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] =
-            await prisma.$queryRaw`SELECT MAX(date), MIN(date) FROM "transactions"`;
+            await prisma.$queryRaw`
+                SELECT MAX(t.date), MIN(t.date)
+                FROM "transactions" t
+                JOIN "financial_accounts" fa 
+                    ON t."account_id" = fa."id"
+                WHERE fa."user_id" = ${userId}
+            `;
         const transactionsStartDate = transactionsStartEndDate[0].min || new Date();
         const transactionsEndDate = transactionsStartEndDate[0].max || new Date();
         let previousPeriod = getPreviousMonthPeriod();
@@ -886,11 +892,13 @@ router.get("/user/:userId", async (req, res) => {
                 LEFT JOIN 
                     "transaction_types" tt ON tc."type_id" = tt."id"
                 LEFT JOIN 
-                    "financial_accounts" fa ON t."account_id" = fa."id" AND fa."user_id" = ${userId}
+                    "financial_accounts" fa ON t."account_id" = fa."id"
                 LEFT JOIN 
                     "account_categories" ac ON fa."category_id" = ac."id"
                 LEFT JOIN 
                     "account_types" at ON ac."type_id" = at."id"
+                WHERE 
+                    (fa."user_id" = ${userId} OR fa."user_id" IS NULL)
                 GROUP BY 
                     ad.date
                 ORDER BY 
