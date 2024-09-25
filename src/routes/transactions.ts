@@ -300,10 +300,10 @@ router.get("/account/:accountId", async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
-         const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] =
-             await prisma.$queryRaw`SELECT MAX(date), MIN(date) FROM "transactions" WHERE account_id = ${accountId}`;
-         const transactionsStartDate = transactionsStartEndDate[0].min || new Date();
-         const transactionsEndDate = transactionsStartEndDate[0].max || new Date();
+        const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] =
+            await prisma.$queryRaw`SELECT MAX(date), MIN(date) FROM "transactions" WHERE account_id = ${accountId}`;
+        const transactionsStartDate = transactionsStartEndDate[0].min || new Date();
+        const transactionsEndDate = transactionsStartEndDate[0].max || new Date();
 
         let previousPeriod = getPreviousMonthPeriod();
         let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId}`;
@@ -657,8 +657,7 @@ router.get("/user/:userId", async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
-        const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] =
-            await prisma.$queryRaw`
+        const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] = await prisma.$queryRaw`
                 SELECT MAX(t.date), MIN(t.date)
                 FROM "transactions" t
                 JOIN "financial_accounts" fa 
@@ -1045,6 +1044,7 @@ router.delete("/:transactionId", async (req, res) => {
     try {
         const localUser = res.locals.user as User;
         const transactionId = req.params.transactionId;
+        const deleteType = req.body.recurringDeleteType as string;
 
         const transaction = await prisma.transaction.findUnique({
             include: {
@@ -1059,16 +1059,38 @@ router.delete("/:transactionId", async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
-        await prisma.transaction.delete({
-            where: {
-                id: transactionId,
-            },
-        });
+        if (deleteType === "this_and_following") {
+          await prisma.transaction.delete({
+              where: {
+                  id: transaction.id,
+              },
+          });
+
+          await prisma.transaction.deleteMany({
+              where: {
+                  recurrenceId: transaction.recurrenceId,
+                  date: {
+                      gte: transaction.date,
+                  },
+              },
+          });
+        } else if (deleteType === "all") {
+              await prisma.transaction.deleteMany({
+                  where: {
+                      recurrenceId: transaction.recurrenceId,
+                  },
+              });
+        } else {
+            await prisma.transaction.delete({
+                where: {
+                    id: transactionId,
+                },
+            });
+        }
 
         return res.status(200).json({ message: "Success" });
     } catch (e) {
         console.error(e);
-
         return res.status(500).json({ message: "Internal error" });
     }
 });
