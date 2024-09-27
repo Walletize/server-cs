@@ -903,16 +903,37 @@ router.get("/user/:userId", async (req, res) => {
                 ORDER BY 
                     ad.date
             ),
+             initial_value_sum AS (
+                SELECT 
+                    COALESCE(SUM(fa."initial_value"), 0) AS initialValueSum,
+                    COALESCE(SUM(CASE 
+                        WHEN at."name" = 'Asset' THEN fa."initial_value" 
+                        ELSE 0 
+                    END), 0) AS assetsInitialValueSum,
+                    COALESCE(SUM(CASE 
+                        WHEN at."name" = 'Liability' THEN fa."initial_value" 
+                        ELSE 0 
+                    END), 0) AS liabilitiesInitialValueSum
+                FROM 
+                    "financial_accounts" fa
+                LEFT JOIN 
+                    "account_categories" ac ON fa."category_id" = ac."id"
+                LEFT JOIN 
+                    "account_types" at ON ac."type_id" = at."id"
+                WHERE 
+                    fa."user_id" = ${userId}
+            ),
             cumulative_data AS (
                 SELECT 
-                    date, 
-                    SUM(totalAmount) OVER (ORDER BY date) AS "cumulativeAmount",
-                    SUM(totalIncome) OVER (ORDER BY date) AS "cumulativeIncome",
-                    SUM(totalExpenses) OVER (ORDER BY date) AS "cumulativeExpenses",
-                    SUM(totalAssetsTransactions) OVER (ORDER BY date) AS "cumulativeAssetsTransactions",
-                    SUM(totalLiabilitiesTransactions) OVER (ORDER BY date) AS "cumulativeLiabilitiesTransactions"
+                    ag.date, 
+                    SUM(ag.totalAmount) OVER (ORDER BY ag.date) + ivs.initialValueSum AS "cumulativeAmount",
+                    SUM(ag.totalIncome) OVER (ORDER BY ag.date) AS "cumulativeIncome",
+                    SUM(ag.totalExpenses) OVER (ORDER BY ag.date) AS "cumulativeExpenses",
+                    SUM(ag.totalAssetsTransactions) OVER (ORDER BY ag.date) + ivs.assetsInitialValueSum AS "cumulativeAssetsTransactions",
+                    SUM(ag.totalLiabilitiesTransactions) OVER (ORDER BY ag.date) + ivs.liabilitiesInitialValueSum AS "cumulativeLiabilitiesTransactions"
                 FROM 
-                    aggregated_data
+                    aggregated_data ag,
+                    initial_value_sum ivs -- Join to include the initial sum value
             )
             SELECT 
                 cd.date, 
