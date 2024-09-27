@@ -545,11 +545,9 @@ router.get("/account/:accountId", async (req, res) => {
             cumulative_data AS (
                 SELECT 
                     date, 
-                    SUM(totalAmount) OVER (ORDER BY date) AS "cumulativeAmount",
+                    SUM(totalAmount) OVER (ORDER BY date) + ${account.initialValue} AS "cumulativeAmount",
                     SUM(totalIncome) OVER (ORDER BY date) AS "cumulativeIncome",
-                    SUM(totalExpenses) OVER (ORDER BY date) AS "cumulativeExpenses",
-                    SUM(totalAssetsTransactions) OVER (ORDER BY date) AS "cumulativeAssetsTransactions",
-                    SUM(totalLiabilitiesTransactions) OVER (ORDER BY date) AS "cumulativeLiabilitiesTransactions"
+                    SUM(totalExpenses) OVER (ORDER BY date) AS "cumulativeExpenses"
                 FROM 
                     aggregated_data
             )
@@ -557,9 +555,7 @@ router.get("/account/:accountId", async (req, res) => {
                 cd.date, 
                 cd."cumulativeAmount",
                 cd."cumulativeIncome",
-                cd."cumulativeExpenses",
-                cd."cumulativeAssetsTransactions",
-                cd."cumulativeLiabilitiesTransactions"
+                cd."cumulativeExpenses"
             FROM 
                 cumulative_data cd
             JOIN 
