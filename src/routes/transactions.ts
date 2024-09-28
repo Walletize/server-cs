@@ -324,28 +324,28 @@ router.get("/account/:accountId", async (req, res) => {
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
                     SUM(
                         CASE 
-                            WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
                             WHEN tt.name = 'Expense' THEN t.amount
                             ELSE 0
                         END
                     ) AS "totalExpenses",
                     SUM(
                         CASE 
-                            WHEN tt.name = 'Income' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN tt.name = 'Income' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
                             WHEN tt.name = 'Income' THEN t.amount
                             ELSE 0
                         END
                     ) AS "totalIncome",
                     SUM(
                         CASE 
-                            WHEN at.name = 'Asset' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN at.name = 'Asset' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
                             WHEN at.name = 'Asset' THEN t.amount
                             ELSE 0
                         END
                     ) AS "assetsValue",
                     SUM(
                         CASE 
-                            WHEN at.name = 'Liability' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN at.name = 'Liability' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
                             WHEN at.name = 'Liability' THEN t.amount
                             ELSE 0
                         END
@@ -356,7 +356,7 @@ router.get("/account/:accountId", async (req, res) => {
                         'amount', t.amount,
                         'convertedAccountAmount', CASE 
                             WHEN t.currency_id != fa.currency_id THEN 
-                                t.amount * t.rate
+                                t.amount / t.rate
                             ELSE 
                                 t.amount 
                         END,
@@ -366,7 +366,7 @@ router.get("/account/:accountId", async (req, res) => {
                                     WHEN fa.currency_id != u.main_currency_id THEN
                                         t.amount * t.rate / fc.rate * uc.rate
                                     ELSE
-                                        t.amount * t.rate
+                                        t.amount / t.rate
                                 END
                             ELSE
                                 CASE
@@ -572,7 +572,7 @@ router.get("/account/:accountId", async (req, res) => {
                                 WHEN fa.currency_id != u.main_currency_id THEN
                                     t.amount * t.rate / fc.rate * uc.rate
                                 ELSE
-                                    t.amount * t.rate
+                                    t.amount / t.rate
                             END
                         ELSE
                             CASE
@@ -602,7 +602,7 @@ router.get("/account/:accountId", async (req, res) => {
                                 WHEN fa.currency_id != u.main_currency_id THEN
                                     t.amount * t.rate / fc.rate * uc.rate
                                 ELSE
-                                    t.amount * t.rate
+                                    t.amount / t.rate
                             END
                         ELSE
                             CASE
@@ -681,28 +681,28 @@ router.get("/user/:userId", async (req, res) => {
                 SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
                     SUM(
                         CASE 
-                            WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
                             WHEN tt.name = 'Expense' THEN t.amount
                             ELSE 0
                         END
                     ) AS "totalExpenses",
                     SUM(
                         CASE 
-                            WHEN tt.name = 'Income' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN tt.name = 'Income' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
                             WHEN tt.name = 'Income' THEN t.amount
                             ELSE 0
                         END
                     ) AS "totalIncome",
                     SUM(
                         CASE 
-                            WHEN at.name = 'Asset' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN at.name = 'Asset' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
                             WHEN at.name = 'Asset' THEN t.amount
                             ELSE 0
                         END
                     ) AS "assetsValue",
                     SUM(
                         CASE 
-                            WHEN at.name = 'Liability' AND t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN at.name = 'Liability' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
                             WHEN at.name = 'Liability' THEN t.amount
                             ELSE 0
                         END
@@ -713,7 +713,7 @@ router.get("/user/:userId", async (req, res) => {
                         'amount', t.amount,
                         'convertedAccountAmount', CASE 
                             WHEN t.currency_id != fa.currency_id THEN 
-                                t.amount * t.rate
+                                t.amount / t.rate
                             ELSE 
                                 t.amount 
                         END,
@@ -723,7 +723,7 @@ router.get("/user/:userId", async (req, res) => {
                                     WHEN fa.currency_id != u.main_currency_id THEN
                                         t.amount * t.rate / fc.rate * uc.rate
                                     ELSE
-                                        t.amount * t.rate
+                                        t.amount / t.rate
                                 END
                             ELSE
                                 CASE
@@ -954,7 +954,7 @@ router.get("/user/:userId", async (req, res) => {
                                 WHEN fa.currency_id != u.main_currency_id THEN
                                     t.amount * t.rate / fc.rate * uc.rate
                                 ELSE
-                                    t.amount * t.rate
+                                    t.amount / t.rate
                             END
                         ELSE
                             CASE
@@ -984,7 +984,7 @@ router.get("/user/:userId", async (req, res) => {
                                 WHEN fa.currency_id != u.main_currency_id THEN
                                     t.amount * t.rate / fc.rate * uc.rate
                                 ELSE
-                                    t.amount * t.rate
+                                    t.amount / t.rate
                             END
                         ELSE
                             CASE

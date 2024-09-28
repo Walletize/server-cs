@@ -126,7 +126,7 @@ router.get("/:accountId", async (req, res) => {
                 fa.initial_value + COALESCE(
                     SUM(
                         CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
+                            WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
                             ELSE t.amount 
                         END
                     ), 
@@ -203,7 +203,7 @@ router.get("/user/:userId", async (req, res) => {
                     fa.initial_value + COALESCE(
                         SUM(
                             CASE 
-                                WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
+                                WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
                                 ELSE t.amount 
                             END
                         ), 
@@ -215,7 +215,7 @@ router.get("/user/:userId", async (req, res) => {
                                 WHEN t.date < ${startDate}::date
                                 THEN 
                                     CASE
-                                        WHEN t.currency_id != fa.currency_id THEN t.amount * t.rate
+                                        WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
                                         ELSE t.amount 
                                     END
                             END
