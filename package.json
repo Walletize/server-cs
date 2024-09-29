@@ -6,7 +6,9 @@
     "dev": "tsx watch src/app.ts",
     "build": "npx tsc",
     "start": "node dist/app.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
   },
   "husky": {
     "hooks": {
@@ -40,7 +42,6 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.14",
     "oslo": "^1.2.1",
-    "prettier": "^3.3.3",
     "react": "^18.3.1",
     "rrule": "^2.8.1",
     "uuid": "^10.0.0"
@@ -60,6 +61,7 @@
     "eslint-plugin-react": "^7.37.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "nodemon": "^3.1.2",
+    "prettier": "^3.3.3",
     "prisma": "^5.15.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"

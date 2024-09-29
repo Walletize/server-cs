@@ -1,22 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyRequestOrigin } from 'lucia';
-import { lucia } from "../app.js";
+import { lucia } from '../app.js';
 
 export function verifyOrigin(req: Request, res: Response, next: NextFunction) {
-  if (req.method === "GET" || req.path.startsWith('/webhooks')) {
+  if (req.method === 'GET' || req.path.startsWith('/webhooks')) {
     return next();
-  };
+  }
   const originHeader = req.headers.origin;
   const allowedOrigin = process.env.WEB_URL;
   if (!originHeader || !allowedOrigin || !verifyRequestOrigin(originHeader, [allowedOrigin])) {
-    return res.status(403).json({ message: "Forbidden" });
-  };
+    return res.status(403).json({ message: 'Forbidden' });
+  }
 
   return next();
 }
 
 export async function verifySession(req: Request, res: Response, next: NextFunction) {
-  const sessionId = lucia.readSessionCookie(req.headers.cookie ?? "");
+  const sessionId = lucia.readSessionCookie(req.headers.cookie ?? '');
   if (!sessionId) {
     res.locals.user = null;
     res.locals.session = null;
@@ -25,10 +25,10 @@ export async function verifySession(req: Request, res: Response, next: NextFunct
 
   const { session, user } = await lucia.validateSession(sessionId);
   if (session && session.fresh) {
-    res.appendHeader("Set-Cookie", lucia.createSessionCookie(session.id).serialize());
+    res.appendHeader('Set-Cookie', lucia.createSessionCookie(session.id).serialize());
   }
   if (!session) {
-    res.appendHeader("Set-Cookie", lucia.createBlankSessionCookie().serialize());
+    res.appendHeader('Set-Cookie', lucia.createBlankSessionCookie().serialize());
   }
   res.locals.user = user;
   res.locals.session = session;
@@ -39,5 +39,5 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
   if (res.locals.user && res.locals.session) {
     return next();
   }
-  return res.status(401).json({ message: "Unauthorized" });
+  return res.status(401).json({ message: 'Unauthorized' });
 }
