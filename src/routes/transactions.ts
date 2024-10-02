@@ -867,8 +867,20 @@ router.get('/user/:userId', async (req, res) => {
                         ELSE 0 
                     END), 0) AS totalIncome,
                     COALESCE(SUM(CASE 
-                        WHEN tt."name" = 'Expense' THEN ABS(t."amount") 
-                        ELSE 0 
+                        WHEN tt."name" = 'Expense' THEN 
+                            CASE 
+                              WHEN t."currency_id" != fa."currency_id" THEN
+                                CASE 
+                                  WHEN fa."currency_id" = u."main_currency_id" THEN ABS(t."amount" / t."rate") 
+                                  ELSE ABS(t."amount" / t."rate" / ca."rate" * cu."rate") 
+                                END
+                              ELSE 
+                                CASE 
+                                  WHEN fa."currency_id" = u."main_currency_id" THEN ABS(t."amount")
+                                  ELSE ABS(t."amount" / ca."rate" * cu."rate")
+                                END
+                            END
+                        ELSE 0
                     END), 0) AS totalExpenses,
                     COALESCE(SUM(CASE 
                         WHEN at."name" = 'Asset' THEN t."amount" 
@@ -892,6 +904,12 @@ router.get('/user/:userId', async (req, res) => {
                     "account_categories" ac ON fa."category_id" = ac."id"
                 LEFT JOIN 
                     "account_types" at ON ac."type_id" = at."id"
+                LEFT JOIN 
+                    "users" u ON fa."user_id" = u."id"
+                LEFT JOIN 
+                    "currencies" ca ON fa."currency_id" = ca."id"
+                LEFT JOIN 
+                    "currencies" cu ON u."main_currency_id" = cu."id"
                 WHERE 
                     (fa."user_id" = ${userId} OR fa."user_id" IS NULL)
                 GROUP BY 
