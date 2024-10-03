@@ -300,329 +300,456 @@ router.get('/account/:accountId', async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] =
-      await prisma.$queryRaw`SELECT MAX(date), MIN(date) FROM "transactions" WHERE account_id = ${accountId}`;
+    const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] = await prisma.$queryRaw`
+      SELECT
+        MAX(date),
+        MIN(date)
+      FROM
+        "transactions"
+      WHERE
+        account_id = ${accountId}
+    `;
     const transactionsStartDate = transactionsStartEndDate[0].min || new Date();
     const transactionsEndDate = transactionsStartEndDate[0].max || new Date();
 
     let previousPeriod = getPreviousMonthPeriod();
-    let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId}`;
+    let groupedTransactionsWhereClause = Prisma.sql`
+      WHERE
+        fa.id = ${accountId}
+    `;
     let chartDataStartDate = Prisma.sql`${transactionsStartDate}`;
     let chartDataEndDate = Prisma.sql`${transactionsEndDate}`;
     let chartDataInterval = Prisma.sql`${getDateInterval(transactionsStartDate, transactionsEndDate)}`;
 
     if (startDateStr && startDateStr != '' && endDateStr && endDateStr != '') {
       previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
-      groupedTransactionsWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${startDateStr}::date AND t.date <= ${endDateStr}::date`;
+      groupedTransactionsWhereClause = Prisma.sql`
+        WHERE
+          fa.id = ${accountId}
+          AND t.date >= ${startDateStr}::date
+          AND t.date <= ${endDateStr}::date
+      `;
       chartDataStartDate = Prisma.sql`${startDateStr}`;
       chartDataEndDate = Prisma.sql`${endDateStr}`;
       chartDataInterval = Prisma.sql`${getDateInterval(new Date(startDateStr), new Date(endDateStr))}`;
     }
-    const prevValuesWhereClause = Prisma.sql`WHERE fa.id = ${accountId} AND t.date >= ${previousPeriod.startDate}::date AND t.date <= ${previousPeriod.endDate}::date`;
+    const prevValuesWhereClause = Prisma.sql`
+      WHERE
+        fa.id = ${accountId}
+        AND t.date >= ${previousPeriod.startDate}::date
+        AND t.date <= ${previousPeriod.endDate}::date
+    `;
 
     const rawGroupedTransactions: RawGroupedTransaction[] = await prisma.$queryRaw`
-                SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
-                    SUM(
-                        CASE 
-                            WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
-                            WHEN tt.name = 'Expense' THEN t.amount
-                            ELSE 0
-                        END
-                    ) AS "totalExpenses",
-                    SUM(
-                        CASE 
-                            WHEN tt.name = 'Income' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
-                            WHEN tt.name = 'Income' THEN t.amount
-                            ELSE 0
-                        END
-                    ) AS "totalIncome",
-                    SUM(
-                        CASE 
-                            WHEN at.name = 'Asset' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
-                            WHEN at.name = 'Asset' THEN t.amount
-                            ELSE 0
-                        END
-                    ) AS "assetsValue",
-                    SUM(
-                        CASE 
-                            WHEN at.name = 'Liability' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
-                            WHEN at.name = 'Liability' THEN t.amount
-                            ELSE 0
-                        END
-                    ) AS "liabilitiesValue",
-                    array_agg(json_build_object(
-                        'id', t.id,
-                        'description', t.description,
-                        'amount', t.amount,
-                        'convertedAccountAmount', CASE 
-                            WHEN t.currency_id != fa.currency_id THEN 
-                                t.amount / t.rate
-                            ELSE 
-                                t.amount 
-                        END,
-                        'convertedMainAmount', CASE 
-                            WHEN t.currency_id != fa.currency_id THEN
-                                CASE
-                                    WHEN fa.currency_id != u.main_currency_id THEN
-                                        t.amount * t.rate / fc.rate * uc.rate
-                                    ELSE
-                                        t.amount / t.rate
-                                END
-                            ELSE
-                                CASE
-                                    WHEN t.currency_id != u.main_currency_id THEN
-                                        t.amount / c.rate * uc.rate
-                                    ELSE
-                                        t.amount
-                            END
-                        END,
-                        'date', t.date,
-                        'rate', t.rate,
-                        'accountId', t.account_id,
-                        'currencyId', t.currency_id,
-                        'recurrenceId', t.recurrence_id,
-                        'createdAt', t.created_at,
-                        'updatedAt', t.updated_at,
-                        'transactionCategory', json_build_object(
-                            'id', tc.id,
-                            'name', tc.name,
-                            'typeId', tc.type_id,
-                            'icon', tc.icon,
-                            'color', tc.color,
-                            'iconColor', tc.icon_color,
-                            'createdAt', tc.created_at,
-                            'updatedAt', tc.updated_at,
-                            'transactionType', json_build_object(
-                                'id', tt.id,
-                                'name', tt.name,
-                                'createdAt', tt.created_at,
-                                'updatedAt', tt.updated_at
-                            )
-                        ),
-                        'financialAccount', json_build_object(
-                            'id', fa.id,
-                            'name', fa.name,
-                            'userId', fa.user_id,
-                            'categoryId', fa.category_id,
-                            'currencyId', fa.currency_id,
-                            'initialValue', fa.initial_value,
-                            'icon', fa.icon,
-                            'color', fa.color,
-                            'iconColor', fa.icon_color,
-                            'createdAt', fa.created_at,
-                            'updatedAt', fa.updated_at,
-                            'currency', json_build_object(
-                                'id', fc.id,
-                                'code', fc.code,
-                                'name', fc.name,
-                                'symbol', fc.symbol,
-                                'rate', fc.rate,
-                                'createdAt', fc.created_at,
-                                'updatedAt', fc.updated_at
-                            ),
-                            'accountCategory', json_build_object(
-                                'id', ac.id,
-                                'name', ac.name,
-                                'typeId', ac.type_id,
-                                'userId', ac.user_id,
-                                'createdAt', ac.created_at,
-                                'updatedAt', ac.updated_at,
-                                'accountType', jsonb_build_object(
-                                    'id', at.id,
-                                    'name', at.name,
-                                    'createdAt', at.created_at,
-                                    'updatedAt', at.updated_at
-                                )
-                            )
-                        ),
-                        'currency', json_build_object(
-                            'id', c.id,
-                            'code', c.code,
-                            'name', c.name,
-                            'symbol', c.symbol,
-                            'rate', c.rate,
-                            'createdAt', c.created_at,
-                            'updatedAt', c.updated_at
-                        )
-                    ) ORDER BY t.created_at DESC) AS transactions
-                FROM transactions t
-                JOIN transaction_categories tc ON t.category_id = tc.id
-                JOIN transaction_types tt ON tc.type_id = tt.id
-                JOIN financial_accounts fa ON t.account_id = fa.id
-                JOIN account_categories ac ON fa.category_id = ac.id
-                JOIN account_types at ON ac.type_id = at.id
-                JOIN currencies c ON t.currency_id = c.id
-                JOIN currencies fc ON fa.currency_id = fc.id
-                JOIN users u ON fa.user_id = u.id
-                JOIN currencies uc ON u.main_currency_id = uc.id
-                ${groupedTransactionsWhereClause}
-                GROUP BY "transactionDate"
-                ORDER BY "transactionDate" DESC
-                LIMIT 10 OFFSET ${page ? (parseInt(page) - 1) * 10 : 0};
-             `;
+      SELECT
+        DATE_TRUNC('day', t.date) AS "transactionDate",
+        array_agg(
+          json_build_object(
+            'id',
+            t.id,
+            'description',
+            t.description,
+            'amount',
+            t.amount,
+            'convertedAmount',
+            CASE
+              WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
+              ELSE t.amount
+            END,
+            'date',
+            t.date,
+            'rate',
+            t.rate,
+            'accountId',
+            t.account_id,
+            'currencyId',
+            t.currency_id,
+            'recurrenceId',
+            t.recurrence_id,
+            'createdAt',
+            t.created_at,
+            'updatedAt',
+            t.updated_at,
+            'transactionCategory',
+            json_build_object(
+              'id',
+              tc.id,
+              'name',
+              tc.name,
+              'typeId',
+              tc.type_id,
+              'icon',
+              tc.icon,
+              'color',
+              tc.color,
+              'iconColor',
+              tc.icon_color,
+              'createdAt',
+              tc.created_at,
+              'updatedAt',
+              tc.updated_at,
+              'transactionType',
+              json_build_object(
+                'id',
+                tt.id,
+                'name',
+                tt.name,
+                'createdAt',
+                tt.created_at,
+                'updatedAt',
+                tt.updated_at
+              )
+            ),
+            'financialAccount',
+            json_build_object(
+              'id',
+              fa.id,
+              'name',
+              fa.name,
+              'userId',
+              fa.user_id,
+              'categoryId',
+              fa.category_id,
+              'currencyId',
+              fa.currency_id,
+              'initialValue',
+              fa.initial_value,
+              'icon',
+              fa.icon,
+              'color',
+              fa.color,
+              'iconColor',
+              fa.icon_color,
+              'createdAt',
+              fa.created_at,
+              'updatedAt',
+              fa.updated_at,
+              'currency',
+              json_build_object(
+                'id',
+                fc.id,
+                'code',
+                fc.code,
+                'name',
+                fc.name,
+                'symbol',
+                fc.symbol,
+                'rate',
+                fc.rate,
+                'createdAt',
+                fc.created_at,
+                'updatedAt',
+                fc.updated_at
+              ),
+              'accountCategory',
+              json_build_object(
+                'id',
+                ac.id,
+                'name',
+                ac.name,
+                'typeId',
+                ac.type_id,
+                'userId',
+                ac.user_id,
+                'createdAt',
+                ac.created_at,
+                'updatedAt',
+                ac.updated_at,
+                'accountType',
+                jsonb_build_object(
+                  'id',
+                  at.id,
+                  'name',
+                  at.name,
+                  'createdAt',
+                  at.created_at,
+                  'updatedAt',
+                  at.updated_at
+                )
+              )
+            ),
+            'currency',
+            json_build_object(
+              'id',
+              c.id,
+              'code',
+              c.code,
+              'name',
+              c.name,
+              'symbol',
+              c.symbol,
+              'rate',
+              c.rate,
+              'createdAt',
+              c.created_at,
+              'updatedAt',
+              c.updated_at
+            )
+          )
+          ORDER BY
+            t.created_at DESC
+        ) AS transactions
+      FROM
+        transactions t
+        JOIN transaction_categories tc ON t.category_id = tc.id
+        JOIN transaction_types tt ON tc.type_id = tt.id
+        JOIN financial_accounts fa ON t.account_id = fa.id
+        JOIN account_categories ac ON fa.category_id = ac.id
+        JOIN account_types at ON ac.type_id = at.id
+        JOIN currencies c ON t.currency_id = c.id
+        JOIN currencies fc ON fa.currency_id = fc.id
+        JOIN users u ON fa.user_id = u.id
+        JOIN currencies uc ON u.main_currency_id = uc.id ${groupedTransactionsWhereClause}
+      GROUP BY
+        "transactionDate"
+      ORDER BY
+        "transactionDate" DESC
+      LIMIT
+        10
+      OFFSET
+        ${page ? (parseInt(page) - 1) * 10 : 0};
+    `;
     const groupedTransactions = JSON.parse(
       JSON.stringify(rawGroupedTransactions, (_, value) => (typeof value === 'bigint' ? value.toString() : value)),
     );
 
     const rawGroupedTransactionsCount: [{ count: bigint }] = await prisma.$queryRaw`
-            SELECT COUNT(*)
-            FROM (
-                SELECT DATE_TRUNC('day', t.date) AS "transactionDate"
-                FROM transactions t
-                JOIN transaction_categories tc ON t.category_id = tc.id
-                JOIN transaction_types tt ON tc.type_id = tt.id
-                JOIN financial_accounts fa ON t.account_id = fa.id
-                JOIN account_categories ac ON fa.category_id = ac.id
-                JOIN account_types at ON ac.type_id = at.id
-                JOIN currencies c ON t.currency_id = c.id
-                JOIN currencies fc ON fa.currency_id = fc.id
-                JOIN users u ON fa.user_id = u.id
-                JOIN currencies uc ON u.main_currency_id = uc.id
-                ${groupedTransactionsWhereClause}
-                GROUP BY "transactionDate"
-            ) AS groupedTransactions;
-        `;
+      SELECT
+        COUNT(*)
+      FROM
+        (
+          SELECT
+            DATE_TRUNC('day', t.date) AS "transactionDate"
+          FROM
+            transactions t
+            JOIN transaction_categories tc ON t.category_id = tc.id
+            JOIN transaction_types tt ON tc.type_id = tt.id
+            JOIN financial_accounts fa ON t.account_id = fa.id
+            JOIN account_categories ac ON fa.category_id = ac.id
+            JOIN account_types at ON ac.type_id = at.id
+            JOIN currencies c ON t.currency_id = c.id
+            JOIN currencies fc ON fa.currency_id = fc.id
+            JOIN users u ON fa.user_id = u.id
+            JOIN currencies uc ON u.main_currency_id = uc.id ${groupedTransactionsWhereClause}
+          GROUP BY
+            "transactionDate"
+        ) AS groupedTransactions;
+    `;
     const groupedTransactionsCount = Number(rawGroupedTransactionsCount[0].count);
 
     const chartData = await prisma.$queryRaw`
-            WITH date_series AS (
-                SELECT generate_series(
-                    ${chartDataStartDate}::date, 
-                    ${chartDataEndDate}::date - interval '1 day', 
-                    ${chartDataInterval}::interval
-                )::date AS date
-                UNION 
-                SELECT ${chartDataEndDate}::date AS date
-            ),
-            all_dates AS (
-                SELECT generate_series(
-                    ${chartDataStartDate}::date, 
-                    ${chartDataEndDate}::date, 
-                    '1 day'::interval
-                )::date AS date
-            ),
-            aggregated_data AS (
-                SELECT 
-                    ad.date, 
-                    COALESCE(SUM(t."amount"), 0) AS totalAmount,
-                    COALESCE(SUM(CASE 
-                        WHEN tt."name" = 'Income' THEN t."amount" 
-                        ELSE 0 
-                    END), 0) AS totalIncome,
-                    COALESCE(SUM(CASE 
-                        WHEN tt."name" = 'Expense' THEN ABS(t."amount") 
-                        ELSE 0 
-                    END), 0) AS totalExpenses,
-                    COALESCE(SUM(CASE 
-                        WHEN at."name" = 'Asset' THEN t."amount" 
-                        ELSE 0 
-                    END), 0) AS totalAssetsTransactions,
-                    COALESCE(SUM(CASE 
-                        WHEN at."name" = 'Liability' THEN t."amount" 
-                        ELSE 0 
-                    END), 0) AS totalLiabilitiesTransactions
-                FROM 
-                    all_dates ad
-                LEFT JOIN 
-                    "transactions" t ON ad.date = t.date
-                LEFT JOIN 
-                    "transaction_categories" tc ON t."category_id" = tc."id"
-                LEFT JOIN 
-                    "transaction_types" tt ON tc."type_id" = tt."id"
-                LEFT JOIN 
-                    "financial_accounts" fa ON t."account_id" = fa."id"
-                LEFT JOIN 
-                    "account_categories" ac ON fa."category_id" = ac."id"
-                LEFT JOIN 
-                    "account_types" at ON ac."type_id" = at."id"
-                WHERE 
-                    (t."account_id" = ${accountId} OR fa."id" IS NULL)
-                GROUP BY 
-                    ad.date
-                ORDER BY 
-                    ad.date
-            ),
-            cumulative_data AS (
-                SELECT 
-                    date, 
-                    SUM(totalAmount) OVER (ORDER BY date) + ${account.initialValue} AS "cumulativeAmount",
-                    SUM(totalIncome) OVER (ORDER BY date) AS "cumulativeIncome",
-                    SUM(totalExpenses) OVER (ORDER BY date) AS "cumulativeExpenses"
-                FROM 
-                    aggregated_data
+      WITH
+        date_series AS (
+          SELECT
+            generate_series(
+              ${chartDataStartDate}::date,
+              ${chartDataEndDate}::date - interval '1 day',
+              ${chartDataInterval}::interval
+            )::date AS date
+          UNION
+          SELECT
+            ${chartDataEndDate}::date AS date
+        ),
+        all_dates AS (
+          SELECT
+            generate_series(
+              ${chartDataStartDate}::date,
+              ${chartDataEndDate}::date,
+              '1 day'::interval
+            )::date AS date
+        ),
+        aggregated_data AS (
+          SELECT
+            ad.date,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN t."currency_id" != fa."currency_id" THEN CASE
+                    WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                    ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+                  END
+                  ELSE CASE
+                    WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                    ELSE (t."amount" / ca."rate" * cu."rate")
+                  END
+                END
+              ),
+              0
+            ) AS totalAmount,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN tt."name" = 'Income' THEN CASE
+                    WHEN t."currency_id" != fa."currency_id" THEN CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                      ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+                    END
+                    ELSE CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                      ELSE (t."amount" / ca."rate" * cu."rate")
+                    END
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalIncome,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN tt."name" = 'Expense' THEN CASE
+                    WHEN t."currency_id" != fa."currency_id" THEN CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN ABS(t."amount" / t."rate")
+                      ELSE ABS(t."amount" / t."rate" / ca."rate" * cu."rate")
+                    END
+                    ELSE CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN ABS(t."amount")
+                      ELSE ABS(t."amount" / ca."rate" * cu."rate")
+                    END
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalExpenses,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN at."name" = 'Asset' THEN CASE
+                    WHEN t."currency_id" != fa."currency_id" THEN CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                      ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+                    END
+                    ELSE CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                      ELSE (t."amount" / ca."rate" * cu."rate")
+                    END
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalAssetsTransactions,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN at."name" = 'Liability' THEN CASE
+                    WHEN t."currency_id" != fa."currency_id" THEN CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                      ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+                    END
+                    ELSE CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                      ELSE (t."amount" / ca."rate" * cu."rate")
+                    END
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalLiabilitiesTransactions
+          FROM
+            all_dates ad
+            LEFT JOIN "transactions" t ON ad.date = t.date
+            LEFT JOIN "transaction_categories" tc ON t."category_id" = tc."id"
+            LEFT JOIN "transaction_types" tt ON tc."type_id" = tt."id"
+            LEFT JOIN "financial_accounts" fa ON t."account_id" = fa."id"
+            LEFT JOIN "account_categories" ac ON fa."category_id" = ac."id"
+            LEFT JOIN "account_types" at ON ac."type_id" = at."id"
+            LEFT JOIN "users" u ON fa."user_id" = u."id"
+            LEFT JOIN "currencies" ca ON fa."currency_id" = ca."id"
+            LEFT JOIN "currencies" cu ON u."main_currency_id" = cu."id"
+          WHERE
+            (
+              t."account_id" = ${accountId}
+              OR fa."id" IS NULL
             )
-            SELECT 
-                cd.date, 
-                cd."cumulativeAmount",
-                cd."cumulativeIncome",
-                cd."cumulativeExpenses"
-            FROM 
-                cumulative_data cd
-            JOIN 
-                date_series ds ON cd.date = ds.date
-            ORDER BY 
-                cd.date;
-        `;
+          GROUP BY
+            ad.date
+          ORDER BY
+            ad.date
+        ),
+        cumulative_data AS (
+          SELECT
+            date,
+            SUM(totalAmount) OVER (
+              ORDER BY
+                date
+            ) + ${account.initialValue} AS "cumulativeAmount",
+            SUM(totalIncome) OVER (
+              ORDER BY
+                date
+            ) AS "cumulativeIncome",
+            SUM(totalExpenses) OVER (
+              ORDER BY
+                date
+            ) AS "cumulativeExpenses"
+          FROM
+            aggregated_data
+        )
+      SELECT
+        cd.date,
+        cd."cumulativeAmount",
+        cd."cumulativeIncome",
+        cd."cumulativeExpenses"
+      FROM
+        cumulative_data cd
+        JOIN date_series ds ON cd.date = ds.date
+      ORDER BY
+        cd.date;
+    `;
 
     const prevIncome: { prevIncome: number }[] = await prisma.$queryRaw`
-                SELECT SUM(
-                    CASE
-                        WHEN t.currency_id != fa.currency_id THEN
-                            CASE
-                                WHEN fa.currency_id != u.main_currency_id THEN
-                                    t.amount * t.rate / fc.rate * uc.rate
-                                ELSE
-                                    t.amount / t.rate
-                            END
-                        ELSE
-                            CASE
-                                WHEN t.currency_id != u.main_currency_id THEN
-                                    t.amount / c.rate * uc.rate
-                                ELSE
-                                    t.amount
-                            END
-                    END
-                ) AS "prevIncome"
-                FROM transactions t
-                JOIN transaction_categories tc ON t.category_id = tc.id
-                JOIN transaction_types tt ON tc.type_id = tt.id
-                JOIN financial_accounts fa ON t.account_id = fa.id
-                JOIN users u ON fa.user_id = u.id
-                JOIN currencies c ON t.currency_id = c.id
-                JOIN currencies fc ON fa.currency_id = fc.id
-                JOIN currencies uc ON u.main_currency_id = uc.id
-                ${prevValuesWhereClause} AND tt.name = 'Income'
-            `;
+      SELECT
+        SUM(
+          CASE
+            WHEN t.currency_id != fa.currency_id THEN CASE
+              WHEN fa.currency_id != u.main_currency_id THEN t.amount * t.rate / fc.rate * uc.rate
+              ELSE t.amount / t.rate
+            END
+            ELSE CASE
+              WHEN t.currency_id != u.main_currency_id THEN t.amount / c.rate * uc.rate
+              ELSE t.amount
+            END
+          END
+        ) AS "prevIncome"
+      FROM
+        transactions t
+        JOIN transaction_categories tc ON t.category_id = tc.id
+        JOIN transaction_types tt ON tc.type_id = tt.id
+        JOIN financial_accounts fa ON t.account_id = fa.id
+        JOIN users u ON fa.user_id = u.id
+        JOIN currencies c ON t.currency_id = c.id
+        JOIN currencies fc ON fa.currency_id = fc.id
+        JOIN currencies uc ON u.main_currency_id = uc.id ${prevValuesWhereClause}
+        AND tt.name = 'Income'
+    `;
 
     const prevExpenses: { prevExpenses: number }[] = await prisma.$queryRaw`
-                SELECT SUM(
-                    CASE
-                        WHEN t.currency_id != fa.currency_id THEN
-                            CASE
-                                WHEN fa.currency_id != u.main_currency_id THEN
-                                    t.amount * t.rate / fc.rate * uc.rate
-                                ELSE
-                                    t.amount / t.rate
-                            END
-                        ELSE
-                            CASE
-                                WHEN t.currency_id != u.main_currency_id THEN
-                                    t.amount / c.rate * uc.rate
-                                ELSE
-                                    t.amount
-                            END
-                    END
-                ) AS "prevExpenses"
-                FROM transactions t
-                JOIN transaction_categories tc ON t.category_id = tc.id
-                JOIN transaction_types tt ON tc.type_id = tt.id
-                JOIN financial_accounts fa ON t.account_id = fa.id
-                JOIN users u ON fa.user_id = u.id
-                JOIN currencies c ON t.currency_id = c.id
-                JOIN currencies fc ON fa.currency_id = fc.id
-                JOIN currencies uc ON u.main_currency_id = uc.id
-                ${prevValuesWhereClause} AND tt.name = 'Expense'
-            `;
+      SELECT
+        SUM(
+          CASE
+            WHEN t.currency_id != fa.currency_id THEN CASE
+              WHEN fa.currency_id != u.main_currency_id THEN t.amount * t.rate / fc.rate * uc.rate
+              ELSE t.amount / t.rate
+            END
+            ELSE CASE
+              WHEN t.currency_id != u.main_currency_id THEN t.amount / c.rate * uc.rate
+              ELSE t.amount
+            END
+          END
+        ) AS "prevExpenses"
+      FROM
+        transactions t
+        JOIN transaction_categories tc ON t.category_id = tc.id
+        JOIN transaction_types tt ON tc.type_id = tt.id
+        JOIN financial_accounts fa ON t.account_id = fa.id
+        JOIN users u ON fa.user_id = u.id
+        JOIN currencies c ON t.currency_id = c.id
+        JOIN currencies fc ON fa.currency_id = fc.id
+        JOIN currencies uc ON u.main_currency_id = uc.id ${prevValuesWhereClause}
+        AND tt.name = 'Expense'
+    `;
 
     const combinedResults = {
       prevStartDate: new Date(previousPeriod.startDate),
@@ -654,375 +781,503 @@ router.get('/user/:userId', async (req, res) => {
     }
 
     const transactionsStartEndDate: [{ max: Date | null; min: Date | null }] = await prisma.$queryRaw`
-                SELECT MAX(t.date), MIN(t.date)
-                FROM "transactions" t
-                JOIN "financial_accounts" fa 
-                    ON t."account_id" = fa."id"
-                WHERE fa."user_id" = ${userId}
-            `;
+      SELECT
+        MAX(t.date),
+        MIN(t.date)
+      FROM
+        "transactions" t
+        JOIN "financial_accounts" fa ON t."account_id" = fa."id"
+      WHERE
+        fa."user_id" = ${userId}
+    `;
     const transactionsStartDate = transactionsStartEndDate[0].min || new Date();
     const transactionsEndDate = transactionsStartEndDate[0].max || new Date();
     let previousPeriod = getPreviousMonthPeriod();
-    let groupedTransactionsWhereClause = Prisma.sql`WHERE fa.user_id = ${userId}`;
+    let groupedTransactionsWhereClause = Prisma.sql`
+      WHERE
+        fa.user_id = ${userId}
+    `;
     let chartDataStartDate = Prisma.sql`${transactionsStartDate}`;
     let chartDataEndDate = Prisma.sql`${transactionsEndDate}`;
     let chartDataInterval = Prisma.sql`${getDateInterval(transactionsStartDate, transactionsEndDate)}`;
 
     if (startDateStr && startDateStr != '' && endDateStr && endDateStr != '') {
       previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
-      groupedTransactionsWhereClause = Prisma.sql`WHERE fa.user_id = ${userId} AND t.date >= ${startDateStr}::date AND t.date <= ${endDateStr}::date`;
+      groupedTransactionsWhereClause = Prisma.sql`
+        WHERE
+          fa.user_id = ${userId}
+          AND t.date >= ${startDateStr}::date
+          AND t.date <= ${endDateStr}::date
+      `;
       chartDataStartDate = Prisma.sql`${startDateStr}`;
       chartDataEndDate = Prisma.sql`${endDateStr}`;
       chartDataInterval = Prisma.sql`${getDateInterval(new Date(startDateStr), new Date(endDateStr))}`;
     }
-    const prevValuesWhereClause = Prisma.sql`WHERE fa.user_id = ${userId} AND t.date >= ${previousPeriod.startDate}::date AND t.date <= ${previousPeriod.endDate}::date`;
+    const prevValuesWhereClause = Prisma.sql`
+      WHERE
+        fa.user_id = ${userId}
+        AND t.date >= ${previousPeriod.startDate}::date
+        AND t.date <= ${previousPeriod.endDate}::date
+    `;
 
     const rawGroupedTransactions: RawGroupedTransaction[] = await prisma.$queryRaw`
-      SELECT DATE_TRUNC('day', t.date) AS "transactionDate",
-          SUM(
-              CASE 
-                  WHEN tt.name = 'Expense' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
-                  WHEN tt.name = 'Expense' THEN t.amount
-                  ELSE 0
-              END
-          ) AS "totalExpenses",
-          SUM(
-              CASE 
-                  WHEN tt.name = 'Income' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
-                  WHEN tt.name = 'Income' THEN t.amount
-                  ELSE 0
-              END
-          ) AS "totalIncome",
-          SUM(
-              CASE 
-                  WHEN at.name = 'Asset' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
-                  WHEN at.name = 'Asset' THEN t.amount
-                  ELSE 0
-              END
-          ) AS "assetsValue",
-          SUM(
-              CASE 
-                  WHEN at.name = 'Liability' AND t.currency_id != fa.currency_id THEN t.amount / t.rate
-                  WHEN at.name = 'Liability' THEN t.amount
-                  ELSE 0
-              END
-          ) AS "liabilitiesValue",
-          array_agg(json_build_object(
-              'id', t.id,
-              'description', t.description,
-              'amount', t.amount,
-              'convertedAccountAmount', CASE 
-                  WHEN t.currency_id != fa.currency_id THEN 
-                      t.amount / t.rate
-                  ELSE 
-                      t.amount 
-              END,
-              'convertedMainAmount', CASE 
-                  WHEN t.currency_id != fa.currency_id THEN
-                      CASE
-                          WHEN fa.currency_id != u.main_currency_id THEN
-                              t.amount * t.rate / fc.rate * uc.rate
-                          ELSE
-                              t.amount / t.rate
-                      END
-                  ELSE
-                      CASE
-                          WHEN t.currency_id != u.main_currency_id THEN
-                              t.amount / c.rate * uc.rate
-                          ELSE
-                              t.amount
-                  END
-              END,
-              'date', t.date,
-              'rate', t.rate,
-              'accountId', t.account_id,
-              'currencyId', t.currency_id,
-              'recurrenceId', t.recurrence_id,
-              'createdAt', t.created_at,
-              'updatedAt', t.updated_at,
-              'transactionCategory', json_build_object(
-                  'id', tc.id,
-                  'name', tc.name,
-                  'typeId', tc.type_id,
-                  'icon', tc.icon,
-                  'color', tc.color,
-                  'iconColor', tc.icon_color,
-                  'createdAt', tc.created_at,
-                  'updatedAt', tc.updated_at,
-                  'transactionType', json_build_object(
-                      'id', tt.id,
-                      'name', tt.name,
-                      'createdAt', tt.created_at,
-                      'updatedAt', tt.updated_at
-                  )
-              ),
-              'financialAccount', json_build_object(
-                  'id', fa.id,
-                  'name', fa.name,
-                  'userId', fa.user_id,
-                  'categoryId', fa.category_id,
-                  'currencyId', fa.currency_id,
-                  'initialValue', fa.initial_value,
-                  'icon', fa.icon,
-                  'color', fa.color,
-                  'iconColor', fa.icon_color,
-                  'createdAt', fa.created_at,
-                  'updatedAt', fa.updated_at,
-                  'currency', json_build_object(
-                      'id', fc.id,
-                      'code', fc.code,
-                      'name', fc.name,
-                      'symbol', fc.symbol,
-                      'rate', fc.rate,
-                      'createdAt', fc.created_at,
-                      'updatedAt', fc.updated_at
-                  ),
-                  'accountCategory', json_build_object(
-                      'id', ac.id,
-                      'name', ac.name,
-                      'typeId', ac.type_id,
-                      'userId', ac.user_id,
-                      'createdAt', ac.created_at,
-                      'updatedAt', ac.updated_at,
-                      'accountType', jsonb_build_object(
-                          'id', at.id,
-                          'name', at.name,
-                          'createdAt', at.created_at,
-                          'updatedAt', at.updated_at
-                      )
-                  )
-              ),
-              'currency', json_build_object(
-                  'id', c.id,
-                  'code', c.code,
-                  'name', c.name,
-                  'symbol', c.symbol,
-                  'rate', c.rate,
-                  'createdAt', c.created_at,
-                  'updatedAt', c.updated_at
+      SELECT
+        DATE_TRUNC('day', t.date) AS "transactionDate",
+        array_agg(
+          json_build_object(
+            'id',
+            t.id,
+            'description',
+            t.description,
+            'amount',
+            t.amount,
+            'convertedAmount',
+            CASE
+              WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
+              ELSE t.amount
+            END,
+            'date',
+            t.date,
+            'rate',
+            t.rate,
+            'accountId',
+            t.account_id,
+            'currencyId',
+            t.currency_id,
+            'recurrenceId',
+            t.recurrence_id,
+            'createdAt',
+            t.created_at,
+            'updatedAt',
+            t.updated_at,
+            'transactionCategory',
+            json_build_object(
+              'id',
+              tc.id,
+              'name',
+              tc.name,
+              'typeId',
+              tc.type_id,
+              'icon',
+              tc.icon,
+              'color',
+              tc.color,
+              'iconColor',
+              tc.icon_color,
+              'createdAt',
+              tc.created_at,
+              'updatedAt',
+              tc.updated_at,
+              'transactionType',
+              json_build_object(
+                'id',
+                tt.id,
+                'name',
+                tt.name,
+                'createdAt',
+                tt.created_at,
+                'updatedAt',
+                tt.updated_at
               )
-          ) ORDER BY t.created_at DESC) AS transactions
-      FROM transactions t
-      JOIN transaction_categories tc ON t.category_id = tc.id
-      JOIN transaction_types tt ON tc.type_id = tt.id
-      JOIN financial_accounts fa ON t.account_id = fa.id
-      JOIN account_categories ac ON fa.category_id = ac.id
-      JOIN account_types at ON ac.type_id = at.id
-      JOIN currencies c ON t.currency_id = c.id
-      JOIN currencies fc ON fa.currency_id = fc.id
-      JOIN users u ON fa.user_id = u.id
-      JOIN currencies uc ON u.main_currency_id = uc.id
-      ${groupedTransactionsWhereClause}
-      GROUP BY "transactionDate"
-      ORDER BY "transactionDate" DESC
-      LIMIT 10 OFFSET ${page ? (parseInt(page) - 1) * 10 : 0};
+            ),
+            'financialAccount',
+            json_build_object(
+              'id',
+              fa.id,
+              'name',
+              fa.name,
+              'userId',
+              fa.user_id,
+              'categoryId',
+              fa.category_id,
+              'currencyId',
+              fa.currency_id,
+              'initialValue',
+              fa.initial_value,
+              'icon',
+              fa.icon,
+              'color',
+              fa.color,
+              'iconColor',
+              fa.icon_color,
+              'createdAt',
+              fa.created_at,
+              'updatedAt',
+              fa.updated_at,
+              'currency',
+              json_build_object(
+                'id',
+                fc.id,
+                'code',
+                fc.code,
+                'name',
+                fc.name,
+                'symbol',
+                fc.symbol,
+                'rate',
+                fc.rate,
+                'createdAt',
+                fc.created_at,
+                'updatedAt',
+                fc.updated_at
+              ),
+              'accountCategory',
+              json_build_object(
+                'id',
+                ac.id,
+                'name',
+                ac.name,
+                'typeId',
+                ac.type_id,
+                'userId',
+                ac.user_id,
+                'createdAt',
+                ac.created_at,
+                'updatedAt',
+                ac.updated_at,
+                'accountType',
+                jsonb_build_object(
+                  'id',
+                  at.id,
+                  'name',
+                  at.name,
+                  'createdAt',
+                  at.created_at,
+                  'updatedAt',
+                  at.updated_at
+                )
+              )
+            ),
+            'currency',
+            json_build_object(
+              'id',
+              c.id,
+              'code',
+              c.code,
+              'name',
+              c.name,
+              'symbol',
+              c.symbol,
+              'rate',
+              c.rate,
+              'createdAt',
+              c.created_at,
+              'updatedAt',
+              c.updated_at
+            )
+          )
+          ORDER BY
+            t.created_at DESC
+        ) AS transactions
+      FROM
+        transactions t
+        JOIN transaction_categories tc ON t.category_id = tc.id
+        JOIN transaction_types tt ON tc.type_id = tt.id
+        JOIN financial_accounts fa ON t.account_id = fa.id
+        JOIN account_categories ac ON fa.category_id = ac.id
+        JOIN account_types at ON ac.type_id = at.id
+        JOIN currencies c ON t.currency_id = c.id
+        JOIN currencies fc ON fa.currency_id = fc.id
+        JOIN users u ON fa.user_id = u.id
+        JOIN currencies uc ON u.main_currency_id = uc.id ${groupedTransactionsWhereClause}
+      GROUP BY
+        "transactionDate"
+      ORDER BY
+        "transactionDate" DESC
+      LIMIT
+        10
+      OFFSET
+        ${page ? (parseInt(page) - 1) * 10 : 0};
     `;
     const groupedTransactions: RawGroupedTransaction[] = JSON.parse(
       JSON.stringify(rawGroupedTransactions, (_, value) => (typeof value === 'bigint' ? value.toString() : value)),
     );
 
     const rawGroupedTransactionsCount: [{ count: bigint }] = await prisma.$queryRaw`
-            SELECT COUNT(*)
-            FROM (
-                SELECT DATE_TRUNC('day', t.date) AS "transactionDate"
-                FROM transactions t
-                JOIN transaction_categories tc ON t.category_id = tc.id
-                JOIN transaction_types tt ON tc.type_id = tt.id
-                JOIN financial_accounts fa ON t.account_id = fa.id
-                JOIN account_categories ac ON fa.category_id = ac.id
-                JOIN account_types at ON ac.type_id = at.id
-                JOIN currencies c ON t.currency_id = c.id
-                JOIN currencies fc ON fa.currency_id = fc.id
-                JOIN users u ON fa.user_id = u.id
-                JOIN currencies uc ON u.main_currency_id = uc.id
-                ${groupedTransactionsWhereClause}
-                GROUP BY "transactionDate"
-            ) AS groupedTransactions;
-        `;
+      SELECT
+        COUNT(*)
+      FROM
+        (
+          SELECT
+            DATE_TRUNC('day', t.date) AS "transactionDate"
+          FROM
+            transactions t
+            JOIN transaction_categories tc ON t.category_id = tc.id
+            JOIN transaction_types tt ON tc.type_id = tt.id
+            JOIN financial_accounts fa ON t.account_id = fa.id
+            JOIN account_categories ac ON fa.category_id = ac.id
+            JOIN account_types at ON ac.type_id = at.id
+            JOIN currencies c ON t.currency_id = c.id
+            JOIN currencies fc ON fa.currency_id = fc.id
+            JOIN users u ON fa.user_id = u.id
+            JOIN currencies uc ON u.main_currency_id = uc.id ${groupedTransactionsWhereClause}
+          GROUP BY
+            "transactionDate"
+        ) AS groupedTransactions;
+    `;
     const groupedTransactionsCount = Number(rawGroupedTransactionsCount[0].count);
 
     const chartData: ChartData[] = await prisma.$queryRaw`
-            WITH date_series AS (
-                SELECT generate_series(
-                    ${chartDataStartDate}::date, 
-                    ${chartDataEndDate}::date - interval '1 day', 
-                    ${chartDataInterval}::interval
-                )::date AS date
-                UNION 
-                SELECT ${chartDataEndDate}::date AS date
-            ),
-            all_dates AS (
-                SELECT generate_series(
-                    ${chartDataStartDate}::date, 
-                    ${chartDataEndDate}::date, 
-                    '1 day'::interval
-                )::date AS date
-            ),
-            aggregated_data AS (
-                SELECT 
-                    ad.date, 
-                    COALESCE(SUM(t."amount"), 0) AS totalAmount,
-                    COALESCE(SUM(CASE 
-                        WHEN tt."name" = 'Income' THEN t."amount" 
-                        ELSE 0 
-                    END), 0) AS totalIncome,
-                    COALESCE(SUM(CASE 
-                        WHEN tt."name" = 'Expense' THEN 
-                            CASE 
-                              WHEN t."currency_id" != fa."currency_id" THEN
-                                CASE 
-                                  WHEN fa."currency_id" = u."main_currency_id" THEN ABS(t."amount" / t."rate") 
-                                  ELSE ABS(t."amount" / t."rate" / ca."rate" * cu."rate") 
-                                END
-                              ELSE 
-                                CASE 
-                                  WHEN fa."currency_id" = u."main_currency_id" THEN ABS(t."amount")
-                                  ELSE ABS(t."amount" / ca."rate" * cu."rate")
-                                END
-                            END
-                        ELSE 0
-                    END), 0) AS totalExpenses,
-                    COALESCE(SUM(CASE 
-                        WHEN at."name" = 'Asset' THEN t."amount" 
-                        ELSE 0 
-                    END), 0) AS totalAssetsTransactions,
-                    COALESCE(SUM(CASE 
-                        WHEN at."name" = 'Liability' THEN t."amount" 
-                        ELSE 0 
-                    END), 0) AS totalLiabilitiesTransactions
-                FROM 
-                    all_dates ad
-                LEFT JOIN 
-                    "transactions" t ON ad.date = t.date
-                LEFT JOIN 
-                    "transaction_categories" tc ON t."category_id" = tc."id"
-                LEFT JOIN 
-                    "transaction_types" tt ON tc."type_id" = tt."id"
-                LEFT JOIN 
-                    "financial_accounts" fa ON t."account_id" = fa."id"
-                LEFT JOIN 
-                    "account_categories" ac ON fa."category_id" = ac."id"
-                LEFT JOIN 
-                    "account_types" at ON ac."type_id" = at."id"
-                LEFT JOIN 
-                    "users" u ON fa."user_id" = u."id"
-                LEFT JOIN 
-                    "currencies" ca ON fa."currency_id" = ca."id"
-                LEFT JOIN 
-                    "currencies" cu ON u."main_currency_id" = cu."id"
-                WHERE 
-                    (fa."user_id" = ${userId} OR fa."user_id" IS NULL)
-                GROUP BY 
-                    ad.date
-                ORDER BY 
-                    ad.date
-            ),
-             initial_value_sum AS (
-                SELECT 
-                    COALESCE(SUM(fa."initial_value"), 0) AS initialValueSum,
-                    COALESCE(SUM(CASE 
-                        WHEN at."name" = 'Asset' THEN fa."initial_value" 
-                        ELSE 0 
-                    END), 0) AS assetsInitialValueSum,
-                    COALESCE(SUM(CASE 
-                        WHEN at."name" = 'Liability' THEN fa."initial_value" 
-                        ELSE 0 
-                    END), 0) AS liabilitiesInitialValueSum
-                FROM 
-                    "financial_accounts" fa
-                LEFT JOIN 
-                    "account_categories" ac ON fa."category_id" = ac."id"
-                LEFT JOIN 
-                    "account_types" at ON ac."type_id" = at."id"
-                WHERE 
-                    fa."user_id" = ${userId}
-            ),
-            cumulative_data AS (
-                SELECT 
-                    ag.date, 
-                    SUM(ag.totalAmount) OVER (ORDER BY ag.date) + ivs.initialValueSum AS "cumulativeAmount",
-                    SUM(ag.totalIncome) OVER (ORDER BY ag.date) AS "cumulativeIncome",
-                    SUM(ag.totalExpenses) OVER (ORDER BY ag.date) AS "cumulativeExpenses",
-                    SUM(ag.totalAssetsTransactions) OVER (ORDER BY ag.date) + ivs.assetsInitialValueSum AS "cumulativeAssetsTransactions",
-                    SUM(ag.totalLiabilitiesTransactions) OVER (ORDER BY ag.date) + ivs.liabilitiesInitialValueSum AS "cumulativeLiabilitiesTransactions"
-                FROM 
-                    aggregated_data ag,
-                    initial_value_sum ivs -- Join to include the initial sum value
+      WITH
+        date_series AS (
+          SELECT
+            generate_series(
+              ${chartDataStartDate}::date,
+              ${chartDataEndDate}::date - interval '1 day',
+              ${chartDataInterval}::interval
+            )::date AS date
+          UNION
+          SELECT
+            ${chartDataEndDate}::date AS date
+        ),
+        all_dates AS (
+          SELECT
+            generate_series(
+              ${chartDataStartDate}::date,
+              ${chartDataEndDate}::date,
+              '1 day'::interval
+            )::date AS date
+        ),
+        aggregated_data AS (
+          SELECT
+            ad.date,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN t."currency_id" != fa."currency_id" THEN CASE
+                    WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                    ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+                  END
+                  ELSE CASE
+                    WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                    ELSE (t."amount" / ca."rate" * cu."rate")
+                  END
+                END
+              ),
+              0
+            ) AS totalAmount,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN tt."name" = 'Income' THEN CASE
+                    WHEN t."currency_id" != fa."currency_id" THEN CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                      ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+                    END
+                    ELSE CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                      ELSE (t."amount" / ca."rate" * cu."rate")
+                    END
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalIncome,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN tt."name" = 'Expense' THEN CASE
+                    WHEN t."currency_id" != fa."currency_id" THEN CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN ABS(t."amount" / t."rate")
+                      ELSE ABS(t."amount" / t."rate" / ca."rate" * cu."rate")
+                    END
+                    ELSE CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN ABS(t."amount")
+                      ELSE ABS(t."amount" / ca."rate" * cu."rate")
+                    END
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalExpenses,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN at."name" = 'Asset' THEN CASE
+                    WHEN t."currency_id" != fa."currency_id" THEN CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                      ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+                    END
+                    ELSE CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                      ELSE (t."amount" / ca."rate" * cu."rate")
+                    END
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalAssetsTransactions,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN at."name" = 'Liability' THEN CASE
+                    WHEN t."currency_id" != fa."currency_id" THEN CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                      ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+                    END
+                    ELSE CASE
+                      WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                      ELSE (t."amount" / ca."rate" * cu."rate")
+                    END
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalLiabilitiesTransactions
+          FROM
+            all_dates ad
+            LEFT JOIN "transactions" t ON ad.date = t.date
+            LEFT JOIN "transaction_categories" tc ON t."category_id" = tc."id"
+            LEFT JOIN "transaction_types" tt ON tc."type_id" = tt."id"
+            LEFT JOIN "financial_accounts" fa ON t."account_id" = fa."id"
+            LEFT JOIN "account_categories" ac ON fa."category_id" = ac."id"
+            LEFT JOIN "account_types" at ON ac."type_id" = at."id"
+            LEFT JOIN "users" u ON fa."user_id" = u."id"
+            LEFT JOIN "currencies" ca ON fa."currency_id" = ca."id"
+            LEFT JOIN "currencies" cu ON u."main_currency_id" = cu."id"
+          WHERE
+            (
+              fa."user_id" = ${userId}
+              OR fa."user_id" IS NULL
             )
-            SELECT 
-                cd.date, 
-                cd."cumulativeAmount",
-                cd."cumulativeIncome",
-                cd."cumulativeExpenses",
-                cd."cumulativeAssetsTransactions",
-                cd."cumulativeLiabilitiesTransactions"
-            FROM 
-                cumulative_data cd
-            JOIN 
-                date_series ds ON cd.date = ds.date
-            ORDER BY 
-                cd.date;
-        `;
+          GROUP BY
+            ad.date
+          ORDER BY
+            ad.date
+        ),
+        initial_value_sum AS (
+          SELECT
+            COALESCE(SUM(fa."initial_value"), 0) AS initialValueSum,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN at."name" = 'Asset' THEN CASE
+                    WHEN fa."currency_id" = u."main_currency_id" THEN fa."initial_value"
+                    ELSE fa."initial_value" / ca."rate" * cu."rate"
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS assetsInitialValueSum,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN at."name" = 'Liability' THEN CASE
+                    WHEN fa."currency_id" = u."main_currency_id" THEN fa."initial_value"
+                    ELSE fa."initial_value" / ca."rate" * cu."rate"
+                  END
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS liabilitiesInitialValueSum
+          FROM
+            "financial_accounts" fa
+            LEFT JOIN "account_categories" ac ON fa."category_id" = ac."id"
+            LEFT JOIN "account_types" at ON ac."type_id" = at."id"
+            LEFT JOIN "users" u ON fa."user_id" = u."id"
+            LEFT JOIN "currencies" ca ON fa."currency_id" = ca."id"
+            LEFT JOIN "currencies" cu ON u."main_currency_id" = cu."id"
+          WHERE
+            fa."user_id" = ${userId}
+        ),
+        cumulative_data AS (
+          SELECT
+            ag.date,
+            SUM(ag.totalAmount) OVER (
+              ORDER BY
+                ag.date
+            ) + ivs.initialValueSum AS "cumulativeAmount",
+            SUM(ag.totalIncome) OVER (
+              ORDER BY
+                ag.date
+            ) AS "cumulativeIncome",
+            SUM(ag.totalExpenses) OVER (
+              ORDER BY
+                ag.date
+            ) AS "cumulativeExpenses",
+            SUM(ag.totalAssetsTransactions) OVER (
+              ORDER BY
+                ag.date
+            ) + ivs.assetsInitialValueSum AS "cumulativeAssetsTransactions",
+            SUM(ag.totalLiabilitiesTransactions) OVER (
+              ORDER BY
+                ag.date
+            ) + ivs.liabilitiesInitialValueSum AS "cumulativeLiabilitiesTransactions"
+          FROM
+            aggregated_data ag,
+            initial_value_sum ivs -- Join to include the initial sum value
+        )
+      SELECT
+        cd.date,
+        cd."cumulativeAmount",
+        cd."cumulativeIncome",
+        cd."cumulativeExpenses",
+        cd."cumulativeAssetsTransactions",
+        cd."cumulativeLiabilitiesTransactions"
+      FROM
+        cumulative_data cd
+        JOIN date_series ds ON cd.date = ds.date
+      ORDER BY
+        cd.date;
+    `;
 
     const prevIncome: { prevIncome: number }[] = await prisma.$queryRaw`
-            SELECT SUM(
-                    CASE
-                        WHEN t.currency_id != fa.currency_id THEN
-                            CASE
-                                WHEN fa.currency_id != u.main_currency_id THEN
-                                    t.amount * t.rate / fc.rate * uc.rate
-                                ELSE
-                                    t.amount / t.rate
-                            END
-                        ELSE
-                            CASE
-                                WHEN t.currency_id != u.main_currency_id THEN
-                                    t.amount / c.rate * uc.rate
-                                ELSE
-                                    t.amount
-                            END
-                    END
-                ) AS "prevIncome"
-                FROM transactions t
-                JOIN transaction_categories tc ON t.category_id = tc.id
-                JOIN transaction_types tt ON tc.type_id = tt.id
-                JOIN financial_accounts fa ON t.account_id = fa.id
-                JOIN users u ON fa.user_id = u.id
-                JOIN currencies c ON t.currency_id = c.id
-                JOIN currencies fc ON fa.currency_id = fc.id
-                JOIN currencies uc ON u.main_currency_id = uc.id
-                ${prevValuesWhereClause} AND tt.name = 'Income'
-            `;
+      SELECT
+        SUM(
+          CASE
+            WHEN t.currency_id != fa.currency_id THEN CASE
+              WHEN fa.currency_id != u.main_currency_id THEN t.amount * t.rate / fc.rate * uc.rate
+              ELSE t.amount / t.rate
+            END
+            ELSE CASE
+              WHEN t.currency_id != u.main_currency_id THEN t.amount / c.rate * uc.rate
+              ELSE t.amount
+            END
+          END
+        ) AS "prevIncome"
+      FROM
+        transactions t
+        JOIN transaction_categories tc ON t.category_id = tc.id
+        JOIN transaction_types tt ON tc.type_id = tt.id
+        JOIN financial_accounts fa ON t.account_id = fa.id
+        JOIN users u ON fa.user_id = u.id
+        JOIN currencies c ON t.currency_id = c.id
+        JOIN currencies fc ON fa.currency_id = fc.id
+        JOIN currencies uc ON u.main_currency_id = uc.id ${prevValuesWhereClause}
+        AND tt.name = 'Income'
+    `;
 
     const prevExpenses: { prevExpenses: number }[] = await prisma.$queryRaw`
-                SELECT SUM(
-                    CASE
-                        WHEN t.currency_id != fa.currency_id THEN
-                            CASE
-                                WHEN fa.currency_id != u.main_currency_id THEN
-                                    t.amount * t.rate / fc.rate * uc.rate
-                                ELSE
-                                    t.amount / t.rate
-                            END
-                        ELSE
-                            CASE
-                                WHEN t.currency_id != u.main_currency_id THEN
-                                    t.amount / c.rate * uc.rate
-                                ELSE
-                                    t.amount
-                            END
-                    END
-                ) AS "prevExpenses"
-                FROM transactions t
-                JOIN transaction_categories tc ON t.category_id = tc.id
-                JOIN transaction_types tt ON tc.type_id = tt.id
-                JOIN financial_accounts fa ON t.account_id = fa.id
-                JOIN users u ON fa.user_id = u.id
-                JOIN currencies c ON t.currency_id = c.id
-                JOIN currencies fc ON fa.currency_id = fc.id
-                JOIN currencies uc ON u.main_currency_id = uc.id
-                ${prevValuesWhereClause} AND tt.name = 'Expense'
-            `;
+      SELECT
+        SUM(
+          CASE
+            WHEN t.currency_id != fa.currency_id THEN CASE
+              WHEN fa.currency_id != u.main_currency_id THEN t.amount * t.rate / fc.rate * uc.rate
+              ELSE t.amount / t.rate
+            END
+            ELSE CASE
+              WHEN t.currency_id != u.main_currency_id THEN t.amount / c.rate * uc.rate
+              ELSE t.amount
+            END
+          END
+        ) AS "prevExpenses"
+      FROM
+        transactions t
+        JOIN transaction_categories tc ON t.category_id = tc.id
+        JOIN transaction_types tt ON tc.type_id = tt.id
+        JOIN financial_accounts fa ON t.account_id = fa.id
+        JOIN users u ON fa.user_id = u.id
+        JOIN currencies c ON t.currency_id = c.id
+        JOIN currencies fc ON fa.currency_id = fc.id
+        JOIN currencies uc ON u.main_currency_id = uc.id ${prevValuesWhereClause}
+        AND tt.name = 'Expense'
+    `;
 
     const combinedResults = {
       prevStartDate: new Date(previousPeriod.startDate),
