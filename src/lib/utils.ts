@@ -59,35 +59,6 @@ export function getPreviousPeriod(startDateStr: string, endDateStr: string): { s
   };
 }
 
-export function getPreviousMonthPeriod() {
-  const now = new Date();
-  let year = now.getFullYear();
-  let month = now.getMonth();
-
-  if (month === 0) {
-    month = 11;
-    year--;
-  } else {
-    month--;
-  }
-
-  const startDate = new Date(year, month, 1);
-
-  const endDate = new Date(year, month + 1, 0);
-
-  const formatDate = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  return {
-    startDate: formatDate(startDate),
-    endDate: formatDate(endDate),
-  };
-}
-
 export function getDateInterval(startDate: Date, endDate: Date): string {
   const timeDiff = endDate.getTime() - startDate.getTime();
 
