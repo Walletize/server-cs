@@ -775,6 +775,8 @@ router.get('/user/:userId', async (req, res) => {
     const startDateStr = req.query.startDate as string | undefined;
     const endDateStr = req.query.endDate as string | undefined;
     const page = req.query.page as string | undefined;
+    const isRanged = startDateStr && startDateStr !== '' && endDateStr && endDateStr !== '';
+    const previousPeriod = isRanged ? getPreviousPeriod(startDateStr, endDateStr) : null;
 
     if (localUser.id !== userId) {
       return res.status(403).json({ message: 'Forbidden' });
@@ -791,34 +793,8 @@ router.get('/user/:userId', async (req, res) => {
         fa."user_id" = ${userId}
     `;
     const transactionsStartDate = transactionsStartEndDate[0].min || new Date();
+    transactionsStartDate.setDate(transactionsStartDate.getDate() - 1);
     const transactionsEndDate = transactionsStartEndDate[0].max || new Date();
-    let previousPeriod = getPreviousMonthPeriod();
-    let groupedTransactionsWhereClause = Prisma.sql`
-      WHERE
-        fa.user_id = ${userId}
-    `;
-    let chartDataStartDate = Prisma.sql`${transactionsStartDate}`;
-    let chartDataEndDate = Prisma.sql`${transactionsEndDate}`;
-    let chartDataInterval = Prisma.sql`${getDateInterval(transactionsStartDate, transactionsEndDate)}`;
-
-    if (startDateStr && startDateStr != '' && endDateStr && endDateStr != '') {
-      previousPeriod = getPreviousPeriod(startDateStr as string, endDateStr as string);
-      groupedTransactionsWhereClause = Prisma.sql`
-        WHERE
-          fa.user_id = ${userId}
-          AND t.date >= ${startDateStr}::date
-          AND t.date <= ${endDateStr}::date
-      `;
-      chartDataStartDate = Prisma.sql`${startDateStr}`;
-      chartDataEndDate = Prisma.sql`${endDateStr}`;
-      chartDataInterval = Prisma.sql`${getDateInterval(new Date(startDateStr), new Date(endDateStr))}`;
-    }
-    const prevValuesWhereClause = Prisma.sql`
-      WHERE
-        fa.user_id = ${userId}
-        AND t.date >= ${previousPeriod.startDate}::date
-        AND t.date <= ${previousPeriod.endDate}::date
-    `;
 
     const rawGroupedTransactions: RawGroupedTransaction[] = await prisma.$queryRaw`
       SELECT
@@ -979,7 +955,14 @@ router.get('/user/:userId', async (req, res) => {
         JOIN currencies c ON t.currency_id = c.id
         JOIN currencies fc ON fa.currency_id = fc.id
         JOIN users u ON fa.user_id = u.id
-        JOIN currencies uc ON u.main_currency_id = uc.id ${groupedTransactionsWhereClause}
+        JOIN currencies uc ON u.main_currency_id = uc.id
+      WHERE
+        fa.user_id = ${userId} ${previousPeriod
+        ? Prisma.sql`
+            AND t.date >= ${startDateStr}::date
+            AND t.date <= ${endDateStr}::date
+          `
+        : Prisma.sql``}
       GROUP BY
         "transactionDate"
       ORDER BY
@@ -1010,31 +993,166 @@ router.get('/user/:userId', async (req, res) => {
             JOIN currencies c ON t.currency_id = c.id
             JOIN currencies fc ON fa.currency_id = fc.id
             JOIN users u ON fa.user_id = u.id
-            JOIN currencies uc ON u.main_currency_id = uc.id ${groupedTransactionsWhereClause}
+            JOIN currencies uc ON u.main_currency_id = uc.id
+          WHERE
+            fa.user_id = ${userId} ${previousPeriod
+        ? Prisma.sql`
+            AND t.date >= ${startDateStr}::date
+            AND t.date <= ${endDateStr}::date
+          `
+        : Prisma.sql``}
           GROUP BY
             "transactionDate"
         ) AS groupedTransactions;
     `;
     const groupedTransactionsCount = Number(rawGroupedTransactionsCount[0].count);
 
+    let prevIncome = 0;
+    let prevExpenses = 0;
+    let prevAssetsValue = 0;
+    let prevLiabilitiesValue = 0;
+    if (previousPeriod) {
+      const rawPrevIncome: { prevIncome: number | null }[] = await prisma.$queryRaw`
+        SELECT
+          SUM(
+            CASE
+              WHEN t.currency_id != fa.currency_id THEN CASE
+                WHEN fa.currency_id != u.main_currency_id THEN t.amount * t.rate / fc.rate * uc.rate
+                ELSE t.amount / t.rate
+              END
+              ELSE CASE
+                WHEN t.currency_id != u.main_currency_id THEN t.amount / c.rate * uc.rate
+                ELSE t.amount
+              END
+            END
+          ) AS "prevIncome"
+        FROM
+          transactions t
+          JOIN transaction_categories tc ON t.category_id = tc.id
+          JOIN transaction_types tt ON tc.type_id = tt.id
+          JOIN financial_accounts fa ON t.account_id = fa.id
+          JOIN users u ON fa.user_id = u.id
+          JOIN currencies c ON t.currency_id = c.id
+          JOIN currencies fc ON fa.currency_id = fc.id
+          JOIN currencies uc ON u.main_currency_id = uc.id
+        WHERE
+          fa.user_id = ${userId}
+          AND t.date >= ${previousPeriod.startDate}::date
+          AND t.date <= ${previousPeriod.endDate}::date
+          AND tt.name = 'Income'
+      `;
+      prevIncome = rawPrevIncome[0].prevIncome || 0;
+
+      const rawPrevExpenses: { prevExpenses: number | null }[] = await prisma.$queryRaw`
+        SELECT
+          SUM(
+            CASE
+              WHEN t.currency_id != fa.currency_id THEN CASE
+                WHEN fa.currency_id != u.main_currency_id THEN t.amount * t.rate / fc.rate * uc.rate
+                ELSE t.amount / t.rate
+              END
+              ELSE CASE
+                WHEN t.currency_id != u.main_currency_id THEN t.amount / c.rate * uc.rate
+                ELSE t.amount
+              END
+            END
+          ) AS "prevExpenses"
+        FROM
+          transactions t
+          JOIN transaction_categories tc ON t.category_id = tc.id
+          JOIN transaction_types tt ON tc.type_id = tt.id
+          JOIN financial_accounts fa ON t.account_id = fa.id
+          JOIN users u ON fa.user_id = u.id
+          JOIN currencies c ON t.currency_id = c.id
+          JOIN currencies fc ON fa.currency_id = fc.id
+          JOIN currencies uc ON u.main_currency_id = uc.id
+        WHERE
+          fa.user_id = ${userId}
+          AND t.date >= ${previousPeriod.startDate}::date
+          AND t.date <= ${previousPeriod.endDate}::date
+          AND tt.name = 'Expense'
+      `;
+      prevExpenses = rawPrevExpenses[0].prevExpenses || 0;
+
+      const rawPrevAssetsValue: { prevAssetsValue: number | null }[] = await prisma.$queryRaw`
+        SELECT
+          SUM(
+            CASE
+              WHEN t."currency_id" != fa."currency_id" THEN CASE
+                WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+              END
+              ELSE CASE
+                WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                ELSE (t."amount" / ca."rate" * cu."rate")
+              END
+            END
+          ) AS "prevAssetsValue"
+        FROM
+          transactions t
+          JOIN "financial_accounts" fa ON t."account_id" = fa."id"
+          JOIN "account_categories" ac ON fa."category_id" = ac."id"
+          JOIN "account_types" at ON ac."type_id" = at."id"
+          JOIN "users" u ON fa."user_id" = u."id"
+          JOIN "currencies" ca ON fa."currency_id" = ca."id"
+          JOIN "currencies" cu ON u."main_currency_id" = cu."id"
+        WHERE
+          at.name = 'Asset'
+          AND fa.user_id = ${userId}
+          AND t.date <= ${previousPeriod.endDate}::date;
+      `;
+      prevAssetsValue = rawPrevAssetsValue[0].prevAssetsValue || 0;
+
+      const rawPrevLiabilitiesValue: { prevLiabilitiesValue: number | null }[] = await prisma.$queryRaw`
+        SELECT
+          SUM(
+            CASE
+              WHEN t."currency_id" != fa."currency_id" THEN CASE
+                WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount" / t."rate")
+                ELSE (t."amount" / t."rate" / ca."rate" * cu."rate")
+              END
+              ELSE CASE
+                WHEN fa."currency_id" = u."main_currency_id" THEN (t."amount")
+                ELSE (t."amount" / ca."rate" * cu."rate")
+              END
+            END
+          ) AS "prevLiabilitiesValue"
+        FROM
+          transactions t
+          JOIN "financial_accounts" fa ON t."account_id" = fa."id"
+          JOIN "account_categories" ac ON fa."category_id" = ac."id"
+          JOIN "account_types" at ON ac."type_id" = at."id"
+          JOIN "users" u ON fa."user_id" = u."id"
+          JOIN "currencies" ca ON fa."currency_id" = ca."id"
+          JOIN "currencies" cu ON u."main_currency_id" = cu."id"
+        WHERE
+          at.name = 'Liability'
+          AND fa.user_id = ${userId}
+          AND t.date <= ${previousPeriod.endDate}::date;
+      `;
+      prevLiabilitiesValue = rawPrevLiabilitiesValue[0].prevLiabilitiesValue || 0;
+    }
+
     const chartData: ChartData[] = await prisma.$queryRaw`
       WITH
         date_series AS (
           SELECT
             generate_series(
-              ${chartDataStartDate}::date,
-              ${chartDataEndDate}::date - interval '1 day',
-              ${chartDataInterval}::interval
+              ${isRanged ? startDateStr : transactionsStartDate}::date,
+              ${isRanged ? endDateStr : transactionsEndDate}::date - interval '1 day',
+              ${isRanged
+        ? getDateInterval(new Date(startDateStr), new Date(endDateStr))
+        : getDateInterval(transactionsStartDate, transactionsEndDate)}::interval
             )::date AS date
           UNION
           SELECT
-            ${chartDataEndDate}::date AS date
+            ${isRanged ? endDateStr : transactionsEndDate}::date AS date
         ),
         all_dates AS (
           SELECT
             generate_series(
-              ${chartDataStartDate}::date,
-              ${chartDataEndDate}::date,
+              ${isRanged ? startDateStr : transactionsStartDate}::date,
+              ${isRanged ? endDateStr : transactionsEndDate}::date,
               '1 day'::interval
             )::date AS date
         ),
@@ -1151,7 +1269,6 @@ router.get('/user/:userId', async (req, res) => {
         ),
         initial_value_sum AS (
           SELECT
-            COALESCE(SUM(fa."initial_value"), 0) AS initialValueSum,
             COALESCE(
               SUM(
                 CASE
@@ -1192,7 +1309,7 @@ router.get('/user/:userId', async (req, res) => {
             SUM(ag.totalAmount) OVER (
               ORDER BY
                 ag.date
-            ) + ivs.initialValueSum AS "cumulativeAmount",
+            ) + ivs.assetsInitialValueSum + ivs.liabilitiesInitialValueSum + ${prevAssetsValue} + ${prevLiabilitiesValue} AS "cumulativeAmount",
             SUM(ag.totalIncome) OVER (
               ORDER BY
                 ag.date
@@ -1204,11 +1321,11 @@ router.get('/user/:userId', async (req, res) => {
             SUM(ag.totalAssetsTransactions) OVER (
               ORDER BY
                 ag.date
-            ) + ivs.assetsInitialValueSum AS "cumulativeAssetsTransactions",
+            ) + ivs.assetsInitialValueSum + ${prevAssetsValue} AS "cumulativeAssetsTransactions",
             SUM(ag.totalLiabilitiesTransactions) OVER (
               ORDER BY
                 ag.date
-            ) + ivs.liabilitiesInitialValueSum AS "cumulativeLiabilitiesTransactions"
+            ) + ivs.liabilitiesInitialValueSum + ${prevLiabilitiesValue} AS "cumulativeLiabilitiesTransactions"
           FROM
             aggregated_data ag,
             initial_value_sum ivs -- Join to include the initial sum value
@@ -1227,63 +1344,11 @@ router.get('/user/:userId', async (req, res) => {
         cd.date;
     `;
 
-    const prevIncome: { prevIncome: number }[] = await prisma.$queryRaw`
-      SELECT
-        SUM(
-          CASE
-            WHEN t.currency_id != fa.currency_id THEN CASE
-              WHEN fa.currency_id != u.main_currency_id THEN t.amount * t.rate / fc.rate * uc.rate
-              ELSE t.amount / t.rate
-            END
-            ELSE CASE
-              WHEN t.currency_id != u.main_currency_id THEN t.amount / c.rate * uc.rate
-              ELSE t.amount
-            END
-          END
-        ) AS "prevIncome"
-      FROM
-        transactions t
-        JOIN transaction_categories tc ON t.category_id = tc.id
-        JOIN transaction_types tt ON tc.type_id = tt.id
-        JOIN financial_accounts fa ON t.account_id = fa.id
-        JOIN users u ON fa.user_id = u.id
-        JOIN currencies c ON t.currency_id = c.id
-        JOIN currencies fc ON fa.currency_id = fc.id
-        JOIN currencies uc ON u.main_currency_id = uc.id ${prevValuesWhereClause}
-        AND tt.name = 'Income'
-    `;
-
-    const prevExpenses: { prevExpenses: number }[] = await prisma.$queryRaw`
-      SELECT
-        SUM(
-          CASE
-            WHEN t.currency_id != fa.currency_id THEN CASE
-              WHEN fa.currency_id != u.main_currency_id THEN t.amount * t.rate / fc.rate * uc.rate
-              ELSE t.amount / t.rate
-            END
-            ELSE CASE
-              WHEN t.currency_id != u.main_currency_id THEN t.amount / c.rate * uc.rate
-              ELSE t.amount
-            END
-          END
-        ) AS "prevExpenses"
-      FROM
-        transactions t
-        JOIN transaction_categories tc ON t.category_id = tc.id
-        JOIN transaction_types tt ON tc.type_id = tt.id
-        JOIN financial_accounts fa ON t.account_id = fa.id
-        JOIN users u ON fa.user_id = u.id
-        JOIN currencies c ON t.currency_id = c.id
-        JOIN currencies fc ON fa.currency_id = fc.id
-        JOIN currencies uc ON u.main_currency_id = uc.id ${prevValuesWhereClause}
-        AND tt.name = 'Expense'
-    `;
-
     const combinedResults = {
-      prevStartDate: new Date(previousPeriod.startDate),
-      prevEndDate: new Date(previousPeriod.endDate),
-      prevIncome: prevIncome[0]?.prevIncome || 0,
-      prevExpenses: prevExpenses[0]?.prevExpenses || 0,
+      prevStartDate: previousPeriod ? new Date(previousPeriod.startDate) : null,
+      prevEndDate: previousPeriod ? new Date(previousPeriod.endDate) : null,
+      prevIncome,
+      prevExpenses,
       groupedTransactions,
       groupedTransactionsCount,
       chartData,
