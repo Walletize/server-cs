@@ -1,32 +1,31 @@
-import express from 'express';
-import { PrismaClient, User } from "@prisma/client"
-import routes from './routes/routes.js';
-import cron from 'node-cron';
-import { updateCurrencyRates } from './lib/utils.js';
 import { PrismaAdapter } from '@lucia-auth/adapter-prisma';
-import { Lucia, Session, verifyRequestOrigin } from 'lucia';
 import { Paddle } from '@paddle/paddle-node-sdk';
-import webhooks from './routes/webhooks.js';
+import { PrismaClient } from '@prisma/client';
+import express from 'express';
+import { Lucia } from 'lucia';
+import cron from 'node-cron';
 import { verifyOrigin, verifySession } from './lib/midddleware.js';
+import { updateCurrencyRates } from './lib/utils.js';
+import routes from './routes/routes.js';
+import webhooks from './routes/webhooks.js';
 
-export const prisma = new PrismaClient()
+export const prisma = new PrismaClient();
 const adapter = new PrismaAdapter(prisma.session, prisma.user);
 export const lucia = new Lucia(adapter, {
-    sessionCookie: {
-        attributes: {
-            secure: process.env.NODE_ENV === "production"
-        }
+  sessionCookie: {
+    attributes: {
+      secure: process.env.NODE_ENV === 'production',
     },
-    getUserAttributes: (attributes) => {
-        return {
-            email: attributes.email,
-            name: attributes.name,
-            image: attributes.image,
-            mainCurrencyId: attributes.mainCurrencyId,
-            emailVerified: attributes.emailVerified,
-        };
-    }
-
+  },
+  getUserAttributes: (attributes) => {
+    return {
+      email: attributes.email,
+      name: attributes.name,
+      image: attributes.image,
+      mainCurrencyId: attributes.mainCurrencyId,
+      emailVerified: attributes.emailVerified,
+    };
+  },
 });
 export const paddle = new Paddle(process.env.PADDLE_API_KEY!);
 
@@ -38,11 +37,11 @@ app.use(express.json());
 app.use('/', routes);
 
 app.listen(process.env.PORT || 3100, () => {
-    console.log('Server started at ' + (process.env.PORT || 3100));
+  console.log('Server started at ' + (process.env.PORT || 3100));
 });
 
 // updateCurrencyRates();
 
 cron.schedule('0 0 * * *', () => {
-    updateCurrencyRates();
+  updateCurrencyRates();
 });
