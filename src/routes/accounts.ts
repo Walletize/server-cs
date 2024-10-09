@@ -89,57 +89,82 @@ router.get('/:accountId', async (req, res) => {
     }
 
     const account: FinancialAccount[] = await prisma.$queryRaw`
-            SELECT 
-                fa.id AS "id",
-                fa.name AS "name",
-                fa.user_id AS "userId",
-                fa.category_id AS "categoryId",
-                fa.initial_value AS "initialValue",
-                fa.icon AS "icon",
-                fa.color AS "color",
-                fa.icon_color AS "iconColor",
-                fa.enable_income_expenses AS "enableIncomeExpenses",
-                fa.created_at AS "createdAt",
-                fa.updated_at AS "updatedAt",
-                jsonb_build_object(
-                    'id', ac.id,
-                    'name', ac.name,
-                    'typeId', ac.type_id,
-                    'userId', ac.user_id,
-                    'createdAt', ac.created_at,
-                    'updatedAt', ac.updated_at,
-                    'accountType', jsonb_build_object(
-                        'id', at.id,
-                        'name', at.name,
-                        'createdAt', at.created_at,
-                        'updatedAt', at.updated_at
-                    )
-                ) AS "accountCategory",
-                jsonb_build_object(
-                    'id', c.id,
-                    'code', c.code,
-                    'name', c.name,
-                    'symbol', c.symbol,
-                    'rate', c.rate,
-                    'createdAt', c.created_at,
-                    'updatedAt', c.updated_at
-                ) AS "currency",
-                fa.initial_value + COALESCE(
-                    SUM(
-                        CASE 
-                            WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
-                            ELSE t.amount 
-                        END
-                    ), 
-                0) AS "currentValue"
-            FROM financial_accounts fa
-            JOIN account_categories ac ON fa.category_id = ac.id
-            JOIN account_types at ON ac.type_id = at.id
-            JOIN currencies c ON fa.currency_id = c.id
-            LEFT JOIN transactions t ON fa.id = t.account_id
-            WHERE fa.id = ${accountId}
-            GROUP BY fa.id, ac.id, at.id, c.id
-        `;
+      SELECT
+        fa.id AS "id",
+        fa.name AS "name",
+        fa.user_id AS "userId",
+        fa.category_id AS "categoryId",
+        fa.initial_value AS "initialValue",
+        fa.icon AS "icon",
+        fa.color AS "color",
+        fa.icon_color AS "iconColor",
+        fa.enable_income_expenses AS "enableIncomeExpenses",
+        fa.created_at AS "createdAt",
+        fa.updated_at AS "updatedAt",
+        jsonb_build_object(
+          'id',
+          ac.id,
+          'name',
+          ac.name,
+          'typeId',
+          ac.type_id,
+          'userId',
+          ac.user_id,
+          'createdAt',
+          ac.created_at,
+          'updatedAt',
+          ac.updated_at,
+          'accountType',
+          jsonb_build_object(
+            'id',
+            at.id,
+            'name',
+            at.name,
+            'createdAt',
+            at.created_at,
+            'updatedAt',
+            at.updated_at
+          )
+        ) AS "accountCategory",
+        jsonb_build_object(
+          'id',
+          c.id,
+          'code',
+          c.code,
+          'name',
+          c.name,
+          'symbol',
+          c.symbol,
+          'rate',
+          c.rate,
+          'createdAt',
+          c.created_at,
+          'updatedAt',
+          c.updated_at
+        ) AS "currency",
+        fa.initial_value + COALESCE(
+          SUM(
+            CASE
+              WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
+              ELSE t.amount
+            END
+          ),
+          0
+        ) AS "currentValue"
+      FROM
+        financial_accounts fa
+        JOIN account_categories ac ON fa.category_id = ac.id
+        JOIN account_types at ON ac.type_id = at.id
+        JOIN currencies c ON fa.currency_id = c.id
+        LEFT JOIN transactions t ON fa.id = t.account_id
+      WHERE
+        fa.id = ${accountId}
+      GROUP BY
+        fa.id,
+        ac.id,
+        at.id,
+        c.id
+    `;
 
     const json = JSON.parse(
       JSON.stringify(account, (_, value) => (typeof value === 'bigint' ? value.toString() : value)),
@@ -163,73 +188,95 @@ router.get('/user/:userId', async (req, res) => {
     }
 
     const rawAccounts: RawFinancialAccount[] = await prisma.$queryRaw`
-            SELECT 
-                fa.id AS "id",
-                fa.name AS "name",
-                fa.user_id AS "userId",
-                fa.category_id AS "categoryId",
-                fa.currency_id AS "currencyId",
-                fa.initial_value AS "initialValue",
-                fa.icon AS "icon",
-                fa.color AS "color",
-                fa.icon_color AS "iconColor",
-                fa.enable_income_expenses AS "enableIncomeExpenses",
-                fa.created_at AS "createdAt",
-                fa.updated_at AS "updatedAt",
-                jsonb_build_object(
-                    'id', ac.id,
-                    'name', ac.name,
-                    'typeId', ac.type_id,
-                    'userId', ac.user_id,
-                    'createdAt', ac.created_at,
-                    'updatedAt', ac.updated_at,
-                    'accountType', jsonb_build_object(
-                        'id', at.id,
-                        'name', at.name,
-                        'createdAt', at.created_at,
-                        'updatedAt', at.updated_at
-                    )
-                ) AS "accountCategory",
-                jsonb_build_object(
-                    'id', fc.id,
-                    'code', fc.code,
-                    'name', fc.name,
-                    'symbol', fc.symbol,
-                    'rate', fc.rate,
-                    'createdAt', fc.created_at,
-                    'updatedAt', fc.updated_at
-                ) AS "currency",
-                    fa.initial_value + COALESCE(
-                        SUM(
-                            CASE 
-                                WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
-                                ELSE t.amount 
-                            END
-                        ), 
-                        0
-                    ) AS "currentValue",
-                    fa.initial_value + COALESCE(
-                        SUM(
-                            CASE 
-                                WHEN t.date < ${startDate}::date
-                                THEN 
-                                    CASE
-                                        WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
-                                        ELSE t.amount 
-                                    END
-                            END
-                        ),
-                        0
-                    ) AS "prevValue"
-            FROM financial_accounts fa
-            JOIN account_categories ac ON fa.category_id = ac.id
-            JOIN account_types at ON ac.type_id = at.id
-            LEFT JOIN transactions t ON fa.id = t.account_id
-            LEFT JOIN currencies fc ON fa.currency_id = fc.id
-            LEFT JOIN currencies tc ON t.currency_id = tc.id
-            WHERE fa.user_id = ${userId}
-            GROUP BY fa.id, ac.id, at.id, fc.id
-        `;
+      SELECT
+        fa.id AS "id",
+        fa.name AS "name",
+        fa.user_id AS "userId",
+        fa.category_id AS "categoryId",
+        fa.currency_id AS "currencyId",
+        fa.initial_value AS "initialValue",
+        fa.icon AS "icon",
+        fa.color AS "color",
+        fa.icon_color AS "iconColor",
+        fa.enable_income_expenses AS "enableIncomeExpenses",
+        fa.created_at AS "createdAt",
+        fa.updated_at AS "updatedAt",
+        jsonb_build_object(
+          'id',
+          ac.id,
+          'name',
+          ac.name,
+          'typeId',
+          ac.type_id,
+          'userId',
+          ac.user_id,
+          'createdAt',
+          ac.created_at,
+          'updatedAt',
+          ac.updated_at,
+          'accountType',
+          jsonb_build_object(
+            'id',
+            at.id,
+            'name',
+            at.name,
+            'createdAt',
+            at.created_at,
+            'updatedAt',
+            at.updated_at
+          )
+        ) AS "accountCategory",
+        jsonb_build_object(
+          'id',
+          fc.id,
+          'code',
+          fc.code,
+          'name',
+          fc.name,
+          'symbol',
+          fc.symbol,
+          'rate',
+          fc.rate,
+          'createdAt',
+          fc.created_at,
+          'updatedAt',
+          fc.updated_at
+        ) AS "currency",
+        fa.initial_value + COALESCE(
+          SUM(
+            CASE
+              WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
+              ELSE t.amount
+            END
+          ),
+          0
+        ) AS "currentValue",
+        fa.initial_value + COALESCE(
+          SUM(
+            CASE
+              WHEN t.date < ${startDate}::date THEN CASE
+                WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
+                ELSE t.amount
+              END
+            END
+          ),
+          0
+        ) AS "prevValue"
+      FROM
+        financial_accounts fa
+        JOIN account_categories ac ON fa.category_id = ac.id
+        JOIN account_types at ON ac.type_id = at.id
+        LEFT JOIN transactions t ON fa.id = t.account_id
+        LEFT JOIN currencies fc ON fa.currency_id = fc.id
+        LEFT JOIN currencies tc ON t.currency_id = tc.id
+      WHERE
+        fa.user_id = ${userId}
+      GROUP BY
+        fa.id,
+        ac.id,
+        at.id,
+        fc.id
+    `;
 
     const accounts = JSON.parse(
       JSON.stringify(rawAccounts, (_, value) => (typeof value === 'bigint' ? value.toString() : value)),
@@ -239,35 +286,45 @@ router.get('/user/:userId', async (req, res) => {
     let prevLiabilitiesValue = 0;
     if (startDate) {
       const prevAssetsValueQuery: { prevAssetsValue: number }[] = await prisma.$queryRaw`
-                SELECT SUM(
-                    CASE
-                        WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate)
-                        ELSE t.amount
-                    END
-                ) AS "prevAssetsValue"
-                FROM transactions t
-                INNER JOIN financial_accounts fa ON t.account_id = fa.id
-                INNER JOIN account_categories ac ON fa.category_id = ac.id
-                INNER JOIN account_types at ON ac.type_id = at.id
-                LEFT JOIN currencies c ON t.currency_id = c.id
-                LEFT JOIN currencies fc ON fa.currency_id = fc.id
-                WHERE at.name = 'Asset' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
-            `;
+        SELECT
+          SUM(
+            CASE
+              WHEN t.currency_id != fa.currency_id THEN (t.amount / c.rate * fc.rate)
+              ELSE t.amount
+            END
+          ) AS "prevAssetsValue"
+        FROM
+          transactions t
+          INNER JOIN financial_accounts fa ON t.account_id = fa.id
+          INNER JOIN account_categories ac ON fa.category_id = ac.id
+          INNER JOIN account_types at ON ac.type_id = at.id
+          LEFT JOIN currencies c ON t.currency_id = c.id
+          LEFT JOIN currencies fc ON fa.currency_id = fc.id
+        WHERE
+          at.name = 'Asset'
+          AND fa.user_id = ${userId}
+          AND t.date < ${startDate}::date;
+      `;
       const prevLiabilitiesValueQuery: { prevLiabilitiesValue: number }[] = await prisma.$queryRaw`
-                SELECT SUM(
-                    CASE
-                        WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
-                        ELSE t.amount
-                    END
-                ) AS "prevLiabilitiesValue"
-                FROM transactions t
-                INNER JOIN financial_accounts fa ON t.account_id = fa.id
-                INNER JOIN account_categories ac ON fa.category_id = ac.id
-                INNER JOIN account_types at ON ac.type_id = at.id
-                LEFT JOIN currencies c ON t.currency_id = c.id
-                LEFT JOIN currencies fc ON fa.currency_id = fc.id
-                WHERE at.name = 'Liability' AND fa.user_id = ${userId} AND t.date < ${startDate}::date;
-            `;
+        SELECT
+          SUM(
+            CASE
+              WHEN t.currency_id != fa.currency_id THEN t.amount / c.rate * fc.rate
+              ELSE t.amount
+            END
+          ) AS "prevLiabilitiesValue"
+        FROM
+          transactions t
+          INNER JOIN financial_accounts fa ON t.account_id = fa.id
+          INNER JOIN account_categories ac ON fa.category_id = ac.id
+          INNER JOIN account_types at ON ac.type_id = at.id
+          LEFT JOIN currencies c ON t.currency_id = c.id
+          LEFT JOIN currencies fc ON fa.currency_id = fc.id
+        WHERE
+          at.name = 'Liability'
+          AND fa.user_id = ${userId}
+          AND t.date < ${startDate}::date;
+      `;
 
       prevAssetsValue = prevAssetsValueQuery[0].prevAssetsValue ? prevAssetsValueQuery[0].prevAssetsValue : 0;
       prevLiabilitiesValue = prevLiabilitiesValueQuery[0].prevLiabilitiesValue

@@ -2,7 +2,6 @@ import { prisma } from '../app.js';
 import { ExchangeRateApiResponse } from '../types/ExchangeRateApiRes';
 
 export async function updateCurrencyRates() {
-  console.log('Started scheduled task');
   try {
     const fetchRates = await fetch(
       `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_API_KEY}/latest/USD`,
