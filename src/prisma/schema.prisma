@@ -25,14 +25,14 @@ model Session {
 }
 
 model User {
-  id                     String                   @id @default(uuid())
+  id                     String                  @id @default(uuid())
   name                   String?
-  email                  String?                  @unique
-  emailVerified          Boolean                  @default(false) @map("email_verified")
-  passwordHash           String?                  @map("password_hash")
+  email                  String?                 @unique
+  emailVerified          Boolean                 @default(false) @map("email_verified")
+  passwordHash           String?                 @map("password_hash")
   image                  String?
-  mainCurrencyId         String                   @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
-  mainCurrency           Currency                 @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
+  mainCurrencyId         String                  @default("b6ecaefd-510d-47cf-83a1-b96494496a84") @map("main_currency_id")
+  mainCurrency           Currency                @relation(fields: [mainCurrencyId], references: [id], onDelete: Cascade)
   sessions               Session[]
   oAuthAccounts          OAuthAccount[]
   financialAccounts      FinancialAccount[]
@@ -41,9 +41,9 @@ model User {
   transactionCategories  TransactionCategory[]
   emailVerificationCodes EmailVerificationCode[]
   passwordResetToken     PasswordResetToken[]
-  SharedFinancialAccount SharedFinancialAccount[]
-  createdAt              DateTime                 @default(now()) @map("created_at")
-  updatedAt              DateTime                 @updatedAt @map("updated_at")
+  accountInvites         AccountInvite[]
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
 
   @@map("users")
 }
@@ -90,23 +90,23 @@ model PasswordResetToken {
 }
 
 model FinancialAccount {
-  id                     String                   @id @default(uuid())
-  name                   String
-  userId                 String                   @map("user_id")
-  categoryId             String                   @map("category_id")
-  currencyId             String                   @map("currency_id")
-  initialValue           BigInt                   @map("initial_value")
-  icon                   String
-  color                  String
-  iconColor              String                   @map("icon_color")
-  enableIncomeExpenses   Boolean                  @default(true) @map("enable_income_expenses")
-  transactions           Transaction[]
-  SharedFinancialAccount SharedFinancialAccount[]
-  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountCategory        AccountCategory          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  currency               Currency                 @relation(fields: [currencyId], references: [id], onDelete: Cascade)
-  createdAt              DateTime                 @default(now()) @map("created_at")
-  updatedAt              DateTime                 @updatedAt @map("updated_at")
+  id                   String          @id @default(uuid())
+  name                 String
+  userId               String          @map("user_id")
+  categoryId           String          @map("category_id")
+  currencyId           String          @map("currency_id")
+  initialValue         BigInt          @map("initial_value")
+  icon                 String
+  color                String
+  iconColor            String          @map("icon_color")
+  enableIncomeExpenses Boolean         @default(true) @map("enable_income_expenses")
+  transactions         Transaction[]
+  accountInvites       AccountInvite[]
+  user                 User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountCategory      AccountCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  currency             Currency        @relation(fields: [currencyId], references: [id], onDelete: Cascade)
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
 
   @@map("financial_accounts")
 }
@@ -135,18 +135,18 @@ model AccountCategory {
   @@map("account_categories")
 }
 
-model SharedFinancialAccount {
+model AccountInvite {
   id               String           @id @default(uuid())
-  inviteStatus     InviteStatus     @map("invite_status")
-  inviteEmail      String?          @map("invite_email")
-  userId           String           @map("user_id")
+  status           InviteStatus     @map("status")
+  email            String           @map("email")
+  userId           String?          @map("user_id")
   accountId        String           @map("account_id")
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   financialAccount FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
-  @@map("shared_financial_accounts")
+  @@map("account_invites")
 }
 
 enum InviteStatus {

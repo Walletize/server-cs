@@ -1,4 +1,4 @@
-import { AccountCategory, FinancialAccount } from '@prisma/client';
+import { AccountCategory, AccountInvite, FinancialAccount, InviteStatus } from '@prisma/client';
 import express from 'express';
 import { User } from 'lucia';
 import { prisma } from '../app.js';
@@ -10,7 +10,8 @@ const router = express.Router();
 router.post('/', async (req, res) => {
   try {
     const localUser = res.locals.user as User;
-    const account = req.body as FinancialAccount;
+    const account = req.body.account as FinancialAccount;
+    const accountInvites = req.body.accountInvites as AccountInvite[];
 
     if (localUser.id !== account.userId) {
       return res.status(403).json({ message: 'Forbidden' });
@@ -33,10 +34,26 @@ router.post('/', async (req, res) => {
       return res.status(403).json({ message: 'Limit reached' });
     }
 
-    await prisma.financialAccount.create({
+    const newAccount = await prisma.financialAccount.create({
       data: account,
     });
 
+    for (const accountInvite of accountInvites) {
+      const user = await prisma.user.findUnique({
+        where: {
+          email: accountInvite.email,
+        },
+      });
+
+      await prisma.accountInvite.create({
+        data: {
+          status: InviteStatus.PENDING,
+          email: accountInvite.email,
+          userId: user?.id,
+          accountId: newAccount.id,
+        },
+      });
+    }
     return res.status(200).json({ message: 'Success' });
   } catch (e) {
     console.error(e);
@@ -150,13 +167,32 @@ router.get('/:accountId', async (req, res) => {
             END
           ),
           0
-        ) AS "currentValue"
+        ) AS "currentValue",
+        jsonb_agg(
+          jsonb_build_object(
+            'id',
+            ai.id,
+            'status',
+            ai.status,
+            'email',
+            ai.email,
+            'userId',
+            ai.user_id,
+            'accountId',
+            ai.account_id,
+            'createdAt',
+            ai.created_at,
+            'updatedAt',
+            ai.updated_at
+          )
+        ) AS "accountInvites"
       FROM
         financial_accounts fa
         JOIN account_categories ac ON fa.category_id = ac.id
         JOIN account_types at ON ac.type_id = at.id
         JOIN currencies c ON fa.currency_id = c.id
         LEFT JOIN transactions t ON fa.id = t.account_id
+        LEFT JOIN account_invites ai ON fa.id = ai.account_id
       WHERE
         fa.id = ${accountId}
       GROUP BY
@@ -261,7 +297,25 @@ router.get('/user/:userId', async (req, res) => {
             END
           ),
           0
-        ) AS "prevValue"
+        ) AS "prevValue",
+        jsonb_agg(
+          jsonb_build_object(
+            'id',
+            ai.id,
+            'status',
+            ai.status,
+            'email',
+            ai.email,
+            'userId',
+            ai.user_id,
+            'accountId',
+            ai.account_id,
+            'createdAt',
+            ai.created_at,
+            'updatedAt',
+            ai.updated_at
+          )
+        ) AS "accountInvites"
       FROM
         financial_accounts fa
         JOIN account_categories ac ON fa.category_id = ac.id
@@ -269,6 +323,7 @@ router.get('/user/:userId', async (req, res) => {
         LEFT JOIN transactions t ON fa.id = t.account_id
         LEFT JOIN currencies fc ON fa.currency_id = fc.id
         LEFT JOIN currencies tc ON t.currency_id = tc.id
+        LEFT JOIN account_invites ai ON fa.id = ai.account_id
       WHERE
         fa.user_id = ${userId}
       GROUP BY

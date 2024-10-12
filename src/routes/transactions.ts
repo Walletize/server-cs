@@ -1,13 +1,14 @@
 import { Prisma, Transaction, TransactionCategory } from '@prisma/client';
 import express from 'express';
 import { User } from 'lucia';
-import { RRule } from 'rrule/dist/esm/rrule.js';
+import pkg from 'rrule';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../app.js';
 import { EXPENSE_ID, INCOME_ID, INCOMING_TRANSFER_ID, OUTGOING_TRANSFER_ID } from '../lib/constants.js';
 import { getDateInterval, getPreviousPeriod } from '../lib/utils.js';
 import { RawGroupedTransaction } from '../types/Transaction.js';
 import { ChartData } from '../types/ChartData.js';
+const { RRule } = pkg;
 
 const router = express.Router();
 
