@@ -87,6 +87,23 @@ router.get('/types/:userId', async (req, res) => {
   }
 });
 
+router.get('/invites', async (req, res) => {
+  try {
+    const localUser = res.locals.user as User;
+
+    const accountInvites = await prisma.accountInvite.findMany({
+      where: {
+        userId: localUser.id,
+      },
+    });
+
+    return res.status(200).json(accountInvites);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: 'Internal error' });
+  }
+});
+
 router.get('/:accountId', async (req, res) => {
   try {
     const localUser = res.locals.user as User;
@@ -159,6 +176,18 @@ router.get('/:accountId', async (req, res) => {
           'updatedAt',
           c.updated_at
         ) AS "currency",
+        jsonb_build_object(
+          'id',
+          u.id,
+          'name',
+          u.name,
+          'email',
+          u.email,
+          'createdAt',
+          u.created_at,
+          'updatedAt',
+          u.updated_at
+        ) AS "user",
         fa.initial_value + COALESCE(
           SUM(
             CASE
@@ -191,6 +220,7 @@ router.get('/:accountId', async (req, res) => {
         JOIN account_categories ac ON fa.category_id = ac.id
         JOIN account_types at ON ac.type_id = at.id
         JOIN currencies c ON fa.currency_id = c.id
+        JOIN users u ON fa.user_id = u.id
         LEFT JOIN transactions t ON fa.id = t.account_id
         LEFT JOIN account_invites ai ON fa.id = ai.account_id
       WHERE
@@ -199,7 +229,8 @@ router.get('/:accountId', async (req, res) => {
         fa.id,
         ac.id,
         at.id,
-        c.id
+        c.id,
+        u.id
     `;
 
     const json = JSON.parse(

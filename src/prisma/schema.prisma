@@ -44,6 +44,7 @@ model User {
   accountInvites         AccountInvite[]
   createdAt              DateTime                @default(now()) @map("created_at")
   updatedAt              DateTime                @updatedAt @map("updated_at")
+  Transaction            Transaction[]
 
   @@map("users")
 }
@@ -161,9 +162,11 @@ model Transaction {
   amount                          BigInt
   rate                            Float?
   accountId                       String                @map("account_id")
+  userId                          String                @map("user_id")
   categoryId                      String                @map("category_id")
   currencyId                      String                @map("currency_id")
   recurrenceId                    String?               @map("recurrence_id")
+  user                            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   financialAccount                FinancialAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transactionCategory             TransactionCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   currency                        Currency              @relation(fields: [currencyId], references: [id], onDelete: Cascade)
