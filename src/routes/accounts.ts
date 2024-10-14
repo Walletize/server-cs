@@ -91,13 +91,83 @@ router.get('/invites', async (req, res) => {
   try {
     const localUser = res.locals.user as User;
 
-    const accountInvites = await prisma.accountInvite.findMany({
+    const rawAccountInvites = await prisma.accountInvite.findMany({
       where: {
         userId: localUser.id,
       },
+      include: {
+        financialAccount: {
+          include: {
+            accountCategory: true,
+            currency: true,
+          },
+        },
+      },
     });
+    const accountInvites = JSON.parse(
+      JSON.stringify(rawAccountInvites, (_, value) => (typeof value === 'bigint' ? value.toString() : value)),
+    );
 
     return res.status(200).json(accountInvites);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: 'Internal error' });
+  }
+});
+
+router.post('/invites/:inviteId/accept', async (req, res) => {
+  try {
+    const localUser = res.locals.user as User;
+    const inviteId = req.params.inviteId as string;
+
+    const accountInvite = await prisma.accountInvite.findUnique({
+      where: {
+        id: inviteId,
+      },
+    });
+
+    if (localUser.id !== accountInvite?.userId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    await prisma.accountInvite.update({
+      where: {
+        id: inviteId,
+      },
+      data: {
+        status: InviteStatus.ACCEPTED,
+      },
+    });
+
+    return res.status(200).json({ message: 'accept_invite_success' });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: 'Internal error' });
+  }
+});
+
+router.post('/invites/:inviteId/deny', async (req, res) => {
+  try {
+    const localUser = res.locals.user as User;
+    const inviteId = req.params.inviteId as string;
+
+    const accountInvite = await prisma.accountInvite.findUnique({
+      where: {
+        id: inviteId,
+      },
+    });
+
+    if (localUser.id !== accountInvite?.userId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    await prisma.accountInvite.delete({
+      where: {
+        id: inviteId,
+      },
+    });
+
+    return res.status(200).json({ message: 'deny_invite_success' });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: 'Internal error' });
@@ -309,6 +379,18 @@ router.get('/user/:userId', async (req, res) => {
           'updatedAt',
           fc.updated_at
         ) AS "currency",
+        jsonb_build_object(
+          'id',
+          u.id,
+          'name',
+          u.name,
+          'email',
+          u.email,
+          'createdAt',
+          u.created_at,
+          'updatedAt',
+          u.updated_at
+        ) AS "user",
         fa.initial_value + COALESCE(
           SUM(
             CASE
@@ -351,6 +433,7 @@ router.get('/user/:userId', async (req, res) => {
         financial_accounts fa
         JOIN account_categories ac ON fa.category_id = ac.id
         JOIN account_types at ON ac.type_id = at.id
+        JOIN users u ON fa.user_id = u.id
         LEFT JOIN transactions t ON fa.id = t.account_id
         LEFT JOIN currencies fc ON fa.currency_id = fc.id
         LEFT JOIN currencies tc ON t.currency_id = tc.id
@@ -361,7 +444,8 @@ router.get('/user/:userId', async (req, res) => {
         fa.id,
         ac.id,
         at.id,
-        fc.id
+        fc.id,
+        u.id
     `;
 
     const accounts = JSON.parse(
