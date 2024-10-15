@@ -180,6 +180,7 @@ router.post('/transfer', async (req, res) => {
         accountId: originAccountId,
         currencyId: selectedCurrencyId,
         categoryId: typeId === EXPENSE_ID && categoryId ? categoryId : OUTGOING_TRANSFER_ID,
+        userId: localUser.id,
       },
     });
     const destinationTranasaction = await prisma.transaction.create({
@@ -190,6 +191,7 @@ router.post('/transfer', async (req, res) => {
         accountId: destinationAccountId,
         currencyId: selectedCurrencyId,
         categoryId: typeId === INCOME_ID && categoryId ? categoryId : INCOMING_TRANSFER_ID,
+        userId: localUser.id,
       },
     });
     await prisma.transactionTransfer.create({
@@ -247,6 +249,7 @@ router.post('/update', async (req, res) => {
         accountId,
         currencyId,
         categoryId: '8e46c952-3378-49f6-bcfa-377351882dad',
+        userId: localUser.id,
       },
     });
 
