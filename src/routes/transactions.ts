@@ -294,12 +294,15 @@ router.get('/account/:accountId', async (req, res) => {
     const previousPeriod = isRanged ? getPreviousPeriod(startDateStr, endDateStr) : null;
 
     const account = await prisma.financialAccount.findUnique({
+      include: {
+        accountInvites: true,
+      },
       where: {
         id: accountId,
       },
     });
 
-    if (localUser.id !== account?.userId) {
+    if (localUser.id !== account?.userId && !account?.accountInvites.some((invite) => invite.userId === localUser.id)) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 

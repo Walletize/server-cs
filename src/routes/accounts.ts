@@ -94,6 +94,7 @@ router.get('/invites', async (req, res) => {
     const rawAccountInvites = await prisma.accountInvite.findMany({
       where: {
         userId: localUser.id,
+        status: InviteStatus.PENDING,
       },
       include: {
         financialAccount: {
@@ -180,15 +181,20 @@ router.get('/:accountId', async (req, res) => {
     const accountId = req.params.accountId;
 
     const checkAccount = await prisma.financialAccount.findUnique({
+      include: {
+        accountInvites: true,
+      },
       where: {
         id: accountId,
       },
     });
-
     if (!checkAccount) {
       return res.status(404).json({ message: 'Not found' });
     }
-    if (localUser.id !== checkAccount?.userId) {
+    if (
+      localUser.id !== checkAccount?.userId &&
+      !checkAccount?.accountInvites.some((invite) => invite.userId === localUser.id)
+    ) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
@@ -267,23 +273,29 @@ router.get('/:accountId', async (req, res) => {
           ),
           0
         ) AS "currentValue",
-        jsonb_agg(
-          jsonb_build_object(
-            'id',
-            ai.id,
-            'status',
-            ai.status,
-            'email',
-            ai.email,
-            'userId',
-            ai.user_id,
-            'accountId',
-            ai.account_id,
-            'createdAt',
-            ai.created_at,
-            'updatedAt',
-            ai.updated_at
-          )
+        COALESCE(
+          jsonb_agg(
+            jsonb_build_object(
+              'id',
+              ai.id,
+              'status',
+              ai.status,
+              'email',
+              ai.email,
+              'userId',
+              ai.user_id,
+              'accountId',
+              ai.account_id,
+              'createdAt',
+              ai.created_at,
+              'updatedAt',
+              ai.updated_at
+            )
+          ) FILTER (
+            WHERE
+              ai.id IS NOT NULL
+          ),
+          '[]'
         ) AS "accountInvites"
       FROM
         financial_accounts fa
@@ -411,23 +423,29 @@ router.get('/user/:userId', async (req, res) => {
           ),
           0
         ) AS "prevValue",
-        jsonb_agg(
-          jsonb_build_object(
-            'id',
-            ai.id,
-            'status',
-            ai.status,
-            'email',
-            ai.email,
-            'userId',
-            ai.user_id,
-            'accountId',
-            ai.account_id,
-            'createdAt',
-            ai.created_at,
-            'updatedAt',
-            ai.updated_at
-          )
+        COALESCE(
+          jsonb_agg(
+            jsonb_build_object(
+              'id',
+              ai.id,
+              'status',
+              ai.status,
+              'email',
+              ai.email,
+              'userId',
+              ai.user_id,
+              'accountId',
+              ai.account_id,
+              'createdAt',
+              ai.created_at,
+              'updatedAt',
+              ai.updated_at
+            )
+          ) FILTER (
+            WHERE
+              ai.id IS NOT NULL
+          ),
+          '[]'
         ) AS "accountInvites"
       FROM
         financial_accounts fa
@@ -440,6 +458,15 @@ router.get('/user/:userId', async (req, res) => {
         LEFT JOIN account_invites ai ON fa.id = ai.account_id
       WHERE
         fa.user_id = ${userId}
+        OR EXISTS (
+          SELECT
+            1
+          FROM
+            account_invites
+          WHERE
+            account_id = fa.id
+            AND user_id = ${userId}
+        )
       GROUP BY
         fa.id,
         ac.id,
