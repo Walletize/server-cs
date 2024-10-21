@@ -4,6 +4,7 @@ import { User } from 'lucia';
 import { prisma } from '../app.js';
 import { ASSET_ID, LIABILITY_ID } from '../lib/constants.js';
 import { RawFinancialAccount } from '../types/FinancialAccount.js';
+import { createAccountPlanCheck } from '../lib/accounts.js';
 
 const router = express.Router();
 
@@ -17,20 +18,7 @@ router.post('/', async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const accounts = await prisma.financialAccount.findMany({
-      where: {
-        userId: account.userId,
-      },
-    });
-    const activeSubscriptions = await prisma.subscription.findMany({
-      where: {
-        userId: account.userId,
-        status: {
-          in: ['active', 'trialing'],
-        },
-      },
-    });
-    if (accounts.length >= 3 && activeSubscriptions.length === 0) {
+    if (!(await createAccountPlanCheck(account, localUser.mainCurrencyId))) {
       return res.status(403).json({ message: 'Limit reached' });
     }
 
@@ -116,6 +104,69 @@ router.get('/invites', async (req, res) => {
   }
 });
 
+router.post('/invites', async (req, res) => {
+  try {
+    const localUser = res.locals.user as User;
+    const accountInvite = req.body as AccountInvite;
+
+    const account = await prisma.financialAccount.findUnique({
+      where: {
+        id: accountInvite.accountId,
+      },
+    });
+
+    if (localUser.id !== account?.userId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email: accountInvite.email,
+      },
+    });
+    accountInvite.userId = user?.id || null;
+
+    await prisma.accountInvite.create({
+      data: accountInvite,
+    });
+
+    return res.status(200).json({ message: 'send_invite_success' });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: 'Internal error' });
+  }
+});
+
+router.delete('/invites/:inviteId', async (req, res) => {
+  try {
+    const localUser = res.locals.user as User;
+    const inviteId = req.params.inviteId as string;
+
+    const invite = await prisma.accountInvite.findUnique({
+      where: {
+        id: inviteId,
+      },
+      include: {
+        financialAccount: true,
+      },
+    });
+    if (localUser.id !== invite?.financialAccount.userId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    await prisma.accountInvite.delete({
+      where: {
+        id: inviteId,
+      },
+    });
+
+    return res.status(200).json({ message: 'send_invite_success' });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: 'Internal error' });
+  }
+});
+
 router.post('/invites/:inviteId/accept', async (req, res) => {
   try {
     const localUser = res.locals.user as User;
@@ -147,7 +198,7 @@ router.post('/invites/:inviteId/accept', async (req, res) => {
   }
 });
 
-router.post('/invites/:inviteId/deny', async (req, res) => {
+router.post('/invites/:inviteId/decline', async (req, res) => {
   try {
     const localUser = res.locals.user as User;
     const inviteId = req.params.inviteId as string;
@@ -168,7 +219,7 @@ router.post('/invites/:inviteId/deny', async (req, res) => {
       },
     });
 
-    return res.status(200).json({ message: 'deny_invite_success' });
+    return res.status(200).json({ message: 'decline_invite_success' });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: 'Internal error' });
@@ -264,38 +315,68 @@ router.get('/:accountId', async (req, res) => {
           'updatedAt',
           u.updated_at
         ) AS "user",
-        fa.initial_value + COALESCE(
-          SUM(
-            CASE
-              WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
-              ELSE t.amount
-            END
-          ),
-          0
-        ) AS "currentValue",
-        COALESCE(
-          jsonb_agg(
-            jsonb_build_object(
-              'id',
-              ai.id,
-              'status',
-              ai.status,
-              'email',
-              ai.email,
-              'userId',
-              ai.user_id,
-              'accountId',
-              ai.account_id,
-              'createdAt',
-              ai.created_at,
-              'updatedAt',
-              ai.updated_at
+        (
+          SELECT
+            fa.initial_value + COALESCE(
+              SUM(
+                CASE
+                  WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
+                  ELSE t.amount
+                END
+              ),
+              0
             )
-          ) FILTER (
-            WHERE
-              ai.id IS NOT NULL
-          ),
-          '[]'
+          FROM
+            transactions t
+          WHERE
+            t.account_id = fa.id
+        ) AS "currentValue",
+        (
+          SELECT
+            COALESCE(
+              jsonb_agg(
+                jsonb_build_object(
+                  'id',
+                  ai.id,
+                  'status',
+                  ai.status,
+                  'email',
+                  ai.email,
+                  'userId',
+                  ai.user_id,
+                  'accountId',
+                  ai.account_id,
+                  'createdAt',
+                  ai.created_at,
+                  'updatedAt',
+                  ai.updated_at,
+                  'user',
+                  jsonb_build_object(
+                    'id',
+                    ui.id,
+                    'name',
+                    ui.name,
+                    'email',
+                    ui.email,
+                    'createdAt',
+                    ui.created_at,
+                    'updatedAt',
+                    ui.updated_at
+                  )
+                )
+                ORDER BY
+                  ai.status DESC
+              ) FILTER (
+                WHERE
+                  ai.id IS NOT NULL
+              ),
+              '[]'
+            )
+          FROM
+            account_invites ai
+            LEFT JOIN users ui ON ai.user_id = ui.id
+          WHERE
+            ai.account_id = fa.id
         ) AS "accountInvites"
       FROM
         financial_accounts fa
@@ -303,8 +384,6 @@ router.get('/:accountId', async (req, res) => {
         JOIN account_types at ON ac.type_id = at.id
         JOIN currencies c ON fa.currency_id = c.id
         JOIN users u ON fa.user_id = u.id
-        LEFT JOIN transactions t ON fa.id = t.account_id
-        LEFT JOIN account_invites ai ON fa.id = ai.account_id
       WHERE
         fa.id = ${accountId}
       GROUP BY
@@ -403,59 +482,93 @@ router.get('/user/:userId', async (req, res) => {
           'updatedAt',
           u.updated_at
         ) AS "user",
-        fa.initial_value + COALESCE(
-          SUM(
-            CASE
-              WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
-              ELSE t.amount
-            END
-          ),
-          0
-        ) AS "currentValue",
-        fa.initial_value + COALESCE(
-          SUM(
-            CASE
-              WHEN t.date < ${startDate}::date THEN CASE
-                WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
-                ELSE t.amount
-              END
-            END
-          ),
-          0
-        ) AS "prevValue",
-        COALESCE(
-          jsonb_agg(
-            jsonb_build_object(
-              'id',
-              ai.id,
-              'status',
-              ai.status,
-              'email',
-              ai.email,
-              'userId',
-              ai.user_id,
-              'accountId',
-              ai.account_id,
-              'createdAt',
-              ai.created_at,
-              'updatedAt',
-              ai.updated_at
+        (
+          SELECT
+            fa.initial_value + COALESCE(
+              SUM(
+                CASE
+                  WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
+                  ELSE t.amount
+                END
+              ),
+              0
             )
-          ) FILTER (
-            WHERE
-              ai.id IS NOT NULL
-          ),
-          '[]'
+          FROM
+            transactions t
+          WHERE
+            t.account_id = fa.id
+        ) AS "currentValue",
+        (
+          SELECT
+            fa.initial_value + COALESCE(
+              SUM(
+                CASE
+                  WHEN t.date < ${startDate}::date THEN CASE
+                    WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
+                    ELSE t.amount
+                  END
+                END
+              ),
+              0
+            )
+          FROM
+            transactions t
+          WHERE
+            t.account_id = fa.id
+        ) AS "prevValue",
+        (
+          SELECT
+            COALESCE(
+              jsonb_agg(
+                jsonb_build_object(
+                  'id',
+                  ai.id,
+                  'status',
+                  ai.status,
+                  'email',
+                  ai.email,
+                  'userId',
+                  ai.user_id,
+                  'accountId',
+                  ai.account_id,
+                  'createdAt',
+                  ai.created_at,
+                  'updatedAt',
+                  ai.updated_at,
+                  'user',
+                  jsonb_build_object(
+                    'id',
+                    ui.id,
+                    'name',
+                    ui.name,
+                    'email',
+                    ui.email,
+                    'createdAt',
+                    ui.created_at,
+                    'updatedAt',
+                    ui.updated_at
+                  )
+                )
+                ORDER BY
+                  ai.status DESC
+              ) FILTER (
+                WHERE
+                  ai.id IS NOT NULL
+              ),
+              '[]'
+            )
+          FROM
+            account_invites ai
+            LEFT JOIN users ui ON ai.user_id = ui.id
+          WHERE
+            ai.account_id = fa.id
         ) AS "accountInvites"
       FROM
         financial_accounts fa
         JOIN account_categories ac ON fa.category_id = ac.id
         JOIN account_types at ON ac.type_id = at.id
         JOIN users u ON fa.user_id = u.id
-        LEFT JOIN transactions t ON fa.id = t.account_id
-        LEFT JOIN currencies fc ON fa.currency_id = fc.id
-        LEFT JOIN currencies tc ON t.currency_id = tc.id
-        LEFT JOIN account_invites ai ON fa.id = ai.account_id
+        JOIN currencies fc ON fa.currency_id = fc.id
       WHERE
         fa.user_id = ${userId}
         OR EXISTS (
@@ -466,6 +579,7 @@ router.get('/user/:userId', async (req, res) => {
           WHERE
             account_id = fa.id
             AND user_id = ${userId}
+            AND status = 'ACCEPTED'
         )
       GROUP BY
         fa.id,
@@ -474,7 +588,6 @@ router.get('/user/:userId', async (req, res) => {
         fc.id,
         u.id
     `;
-
     const accounts = JSON.parse(
       JSON.stringify(rawAccounts, (_, value) => (typeof value === 'bigint' ? value.toString() : value)),
     );

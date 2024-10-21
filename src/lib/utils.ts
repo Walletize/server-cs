@@ -40,8 +40,59 @@ export function getPreviousPeriod(startDateStr: string, endDateStr: string): { s
   const startDate = new Date(startDateStr);
   const endDate = new Date(endDateStr);
 
-  const periodDuration = endDate.getTime() - startDate.getTime();
+  // Function to get the last day of a month
+  const getLastDayOfMonth = (date: Date): number => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
 
+  // Check if the date range is for a full year (Jan 1 to Dec 31)
+  const isFullYear =
+    startDate.getMonth() === 0 && startDate.getDate() === 1 && endDate.getMonth() === 11 && endDate.getDate() === 31;
+
+  if (isFullYear) {
+    // Previous year's start and end dates
+    const prevYearStartDate = new Date(startDate.getFullYear() - 1, 0, 1); // Jan 1 of the previous year
+    const prevYearEndDate = new Date(endDate.getFullYear() - 1, 11, 31); // Dec 31 of the previous year
+
+    const formatDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    return {
+      startDate: formatDate(prevYearStartDate),
+      endDate: formatDate(prevYearEndDate),
+    };
+  }
+
+  // Check if the date range is for a full month (start of the month to the end of the same month)
+  const isFullMonth =
+    startDate.getDate() === 1 &&
+    endDate.getDate() === getLastDayOfMonth(endDate) &&
+    startDate.getMonth() === endDate.getMonth();
+
+  if (isFullMonth) {
+    // Get the previous month
+    const prevMonthEndDate = new Date(startDate.getFullYear(), startDate.getMonth(), 0); // Last day of the previous month
+    const prevMonthStartDate = new Date(prevMonthEndDate.getFullYear(), prevMonthEndDate.getMonth(), 1); // First day of the previous month
+
+    const formatDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    return {
+      startDate: formatDate(prevMonthStartDate),
+      endDate: formatDate(prevMonthEndDate),
+    };
+  }
+
+  // If the range spans more than one month, or doesn't match a full month, use periodDuration
+  const periodDuration = endDate.getTime() - startDate.getTime();
   const prevEndDate = new Date(startDate.getTime() - 1); // One day before the original start date
   const prevStartDate = new Date(prevEndDate.getTime() - periodDuration);
 

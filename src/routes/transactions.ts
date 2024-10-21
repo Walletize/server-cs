@@ -18,16 +18,18 @@ router.post('/', async (req, res) => {
     const transaction = req.body.transaction as Transaction;
     const selectedReccurence = req.body.selectedReccurence as string;
     const recurrenceEndDate = req.body.recurrenceEndDate as string;
+    transaction.userId = localUser.id;
 
-    const account = await prisma.financialAccount.findUnique({
-      where: {
-        id: transaction.accountId,
-      },
-    });
+    // const account = await prisma.financialAccount.findUnique({
+    //   where: {
+    //     id: transaction.accountId,
+    //   },
+    // });
 
-    if (localUser.id !== account?.userId) {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
+    // TODO check if user has access to account
+    // if (localUser.id !== account?.userId) {
+    //   return res.status(403).json({ message: 'Forbidden' });
+    // }
 
     if (selectedReccurence !== 'never') {
       let rrule = new RRule({
@@ -449,6 +451,39 @@ router.get('/account/:accountId', async (req, res) => {
                   'updatedAt',
                   at.updated_at
                 )
+              ),
+              'accountInvites',
+              (
+                SELECT
+                  COALESCE(
+                    jsonb_agg(
+                      jsonb_build_object(
+                        'id',
+                        ai.id,
+                        'status',
+                        ai.status,
+                        'email',
+                        ai.email,
+                        'userId',
+                        ai.user_id,
+                        'accountId',
+                        ai.account_id,
+                        'createdAt',
+                        ai.created_at,
+                        'updatedAt',
+                        ai.updated_at
+                      )
+                    ) FILTER (
+                      WHERE
+                        ai.id IS NOT NULL
+                    ),
+                    '[]'
+                  )
+                FROM
+                  account_invites ai
+                WHERE
+                  ai.account_id = fa.id
+                  AND ai.status = 'ACCEPTED'
               )
             ),
             'currency',
@@ -467,7 +502,9 @@ router.get('/account/:accountId', async (req, res) => {
               c.created_at,
               'updatedAt',
               c.updated_at
-            )
+            ),
+            'user',
+            json_build_object('id', u.id, 'name', u.name, 'email', u.email)
           )
           ORDER BY
             t.created_at DESC
@@ -481,7 +518,7 @@ router.get('/account/:accountId', async (req, res) => {
         JOIN account_types at ON ac.type_id = at.id
         JOIN currencies c ON t.currency_id = c.id
         JOIN currencies fc ON fa.currency_id = fc.id
-        JOIN users u ON fa.user_id = u.id
+        JOIN users u ON t.user_id = u.id
         JOIN currencies uc ON u.main_currency_id = uc.id
       WHERE
         account_id = ${accountId} ${previousPeriod
@@ -664,8 +701,8 @@ router.get('/account/:accountId', async (req, res) => {
               SUM(
                 CASE
                   WHEN tt."name" = 'Expense' THEN CASE
-                    WHEN t.currency_id != fa.currency_id THEN t.amount / t.rate
-                    ELSE t.amount
+                    WHEN t.currency_id != fa.currency_id THEN ABS(t.amount / t.rate)
+                    ELSE ABS(t.amount)
                   END
                   ELSE 0
                 END
@@ -894,6 +931,39 @@ router.get('/user/:userId', async (req, res) => {
                   'updatedAt',
                   at.updated_at
                 )
+              ),
+              'accountInvites',
+              (
+                SELECT
+                  COALESCE(
+                    jsonb_agg(
+                      jsonb_build_object(
+                        'id',
+                        ai.id,
+                        'status',
+                        ai.status,
+                        'email',
+                        ai.email,
+                        'userId',
+                        ai.user_id,
+                        'accountId',
+                        ai.account_id,
+                        'createdAt',
+                        ai.created_at,
+                        'updatedAt',
+                        ai.updated_at
+                      )
+                    ) FILTER (
+                      WHERE
+                        ai.id IS NOT NULL
+                    ),
+                    '[]'
+                  )
+                FROM
+                  account_invites ai
+                WHERE
+                  ai.account_id = fa.id
+                  AND ai.status = 'ACCEPTED'
               )
             ),
             'currency',
@@ -912,7 +982,9 @@ router.get('/user/:userId', async (req, res) => {
               c.created_at,
               'updatedAt',
               c.updated_at
-            )
+            ),
+            'user',
+            json_build_object('id', u.id, 'name', u.name, 'email', u.email)
           )
           ORDER BY
             t.created_at DESC
@@ -926,10 +998,22 @@ router.get('/user/:userId', async (req, res) => {
         JOIN account_types at ON ac.type_id = at.id
         JOIN currencies c ON t.currency_id = c.id
         JOIN currencies fc ON fa.currency_id = fc.id
-        JOIN users u ON fa.user_id = u.id
+        JOIN users u ON t.user_id = u.id
         JOIN currencies uc ON u.main_currency_id = uc.id
       WHERE
-        fa.user_id = ${userId} ${previousPeriod
+        (
+          fa.user_id = ${userId}
+          OR EXISTS (
+            SELECT
+              1
+            FROM
+              account_invites
+            WHERE
+              account_id = fa.id
+              AND user_id = ${userId}
+              AND status = 'ACCEPTED'
+          )
+        ) ${previousPeriod
         ? Prisma.sql`
             AND t.date >= ${startDateStr}::date
             AND t.date <= ${endDateStr}::date
@@ -967,7 +1051,19 @@ router.get('/user/:userId', async (req, res) => {
             JOIN users u ON fa.user_id = u.id
             JOIN currencies uc ON u.main_currency_id = uc.id
           WHERE
-            fa.user_id = ${userId} ${previousPeriod
+            (
+              fa.user_id = ${userId}
+              OR EXISTS (
+                SELECT
+                  1
+                FROM
+                  account_invites
+                WHERE
+                  account_id = fa.id
+                  AND user_id = ${userId}
+                  AND status = 'ACCEPTED'
+              )
+            ) ${previousPeriod
         ? Prisma.sql`
             AND t.date >= ${startDateStr}::date
             AND t.date <= ${endDateStr}::date
@@ -1008,7 +1104,19 @@ router.get('/user/:userId', async (req, res) => {
           JOIN currencies fc ON fa.currency_id = fc.id
           JOIN currencies uc ON u.main_currency_id = uc.id
         WHERE
-          fa.user_id = ${userId}
+          (
+            fa.user_id = ${userId}
+            OR EXISTS (
+              SELECT
+                1
+              FROM
+                account_invites
+              WHERE
+                account_id = fa.id
+                AND user_id = ${userId}
+                AND status = 'ACCEPTED'
+            )
+          )
           AND t.date >= ${previousPeriod.startDate}::date
           AND t.date <= ${previousPeriod.endDate}::date
           AND tt.name = 'Income'
@@ -1039,7 +1147,19 @@ router.get('/user/:userId', async (req, res) => {
           JOIN currencies fc ON fa.currency_id = fc.id
           JOIN currencies uc ON u.main_currency_id = uc.id
         WHERE
-          fa.user_id = ${userId}
+          (
+            fa.user_id = ${userId}
+            OR EXISTS (
+              SELECT
+                1
+              FROM
+                account_invites
+              WHERE
+                account_id = fa.id
+                AND user_id = ${userId}
+                AND status = 'ACCEPTED'
+            )
+          )
           AND t.date >= ${previousPeriod.startDate}::date
           AND t.date <= ${previousPeriod.endDate}::date
           AND tt.name = 'Expense'
@@ -1069,8 +1189,20 @@ router.get('/user/:userId', async (req, res) => {
           JOIN "currencies" ca ON fa."currency_id" = ca."id"
           JOIN "currencies" cu ON u."main_currency_id" = cu."id"
         WHERE
-          at.name = 'Asset'
-          AND fa.user_id = ${userId}
+          (
+            fa.user_id = ${userId}
+            OR EXISTS (
+              SELECT
+                1
+              FROM
+                account_invites
+              WHERE
+                account_id = fa.id
+                AND user_id = ${userId}
+                AND status = 'ACCEPTED'
+            )
+          )
+          AND at.name = 'Asset'
           AND t.date <= ${previousPeriod.endDate}::date;
       `;
       prevAssetsValue = rawPrevAssetsValue[0].prevAssetsValue || 0;
@@ -1098,8 +1230,20 @@ router.get('/user/:userId', async (req, res) => {
           JOIN "currencies" ca ON fa."currency_id" = ca."id"
           JOIN "currencies" cu ON u."main_currency_id" = cu."id"
         WHERE
-          at.name = 'Liability'
-          AND fa.user_id = ${userId}
+          (
+            fa.user_id = ${userId}
+            OR EXISTS (
+              SELECT
+                1
+              FROM
+                account_invites
+              WHERE
+                account_id = fa.id
+                AND user_id = ${userId}
+                AND status = 'ACCEPTED'
+            )
+          )
+          AND at.name = 'Liability'
           AND t.date <= ${previousPeriod.endDate}::date;
       `;
       prevLiabilitiesValue = rawPrevLiabilitiesValue[0].prevLiabilitiesValue || 0;
@@ -1231,7 +1375,19 @@ router.get('/user/:userId', async (req, res) => {
             LEFT JOIN "currencies" cu ON u."main_currency_id" = cu."id"
           WHERE
             (
-              fa."user_id" = ${userId}
+              (
+                fa.user_id = ${userId}
+                OR EXISTS (
+                  SELECT
+                    1
+                  FROM
+                    account_invites
+                  WHERE
+                    account_id = fa.id
+                    AND user_id = ${userId}
+                    AND status = 'ACCEPTED'
+                )
+              )
               OR fa."user_id" IS NULL
             )
           GROUP BY
