@@ -8,6 +8,10 @@ import { verifyOrigin, verifySession } from './lib/midddleware.js';
 import { updateCurrencyRates } from './lib/utils.js';
 import routes from './routes/routes.js';
 import webhooks from './routes/webhooks.js';
+import dotenv from 'dotenv';
+
+const env = process.env.NODE_ENV || 'development';
+dotenv.config({ path: `.env.${env}` });
 
 export const prisma = new PrismaClient();
 const adapter = new PrismaAdapter(prisma.session, prisma.user);
@@ -37,7 +41,8 @@ app.use(express.json());
 app.use('/', routes);
 
 app.listen(process.env.PORT || 3100, () => {
-  console.log('Server started at ' + (process.env.PORT || 3100));
+  console.info('Server started at ' + (process.env.PORT || 3100));
+  console.info('Environment: ' + env);
 });
 
 // updateCurrencyRates();

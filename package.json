@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev": "tsx watch src/app.ts",
+    "dev": "tsx watch src/app.ts NODE_ENV=development",
     "build": "npx tsc",
     "start": "node dist/app.js",
     "prepare": "husky",
@@ -31,6 +31,7 @@
     "@paddle/paddle-node-sdk": "^1.4.1",
     "@prisma/client": "^5.15.0",
     "@react-email/components": "^0.0.21",
+    "dotenv": "^16.4.5",
     "eslint": "^9.11.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",

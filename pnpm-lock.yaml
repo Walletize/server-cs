@@ -23,6 +23,9 @@ dependencies:
   '@react-email/components':
     specifier: ^0.0.21
     version: 0.0.21(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
+  dotenv:
+    specifier: ^16.4.5
+    version: 16.4.5
   eslint:
     specifier: ^9.11.1
     version: 9.11.1
@@ -2769,6 +2772,11 @@ packages:
       dom-serializer: 2.0.0
       domelementtype: 2.3.0
       domhandler: 5.0.3
+    dev: false
+
+  /dotenv@16.4.5:
+    resolution: {integrity: sha512-ZmdL2rui+eB2YwhsWzjInR8LldtZHGDoQ1ugH85ppHKwpUHL7j7rN0Ti9NCnGiQbhaZ11FpR+7ao1dNsmduNUg==}
+    engines: {node: '>=12'}
     dev: false
 
   /eastasianwidth@0.2.0:

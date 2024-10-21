@@ -60,7 +60,7 @@ export default [
     rules: {
       'prefer-const': 'warn',
       'no-var': 'warn',
-      'no-console': ['warn', { allow: ['error'] }],
+      'no-console': ['warn', { allow: ['error', 'info'] }],
 
       'no-unused-vars': [
         'warn',
